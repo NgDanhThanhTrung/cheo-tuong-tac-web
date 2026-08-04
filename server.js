@@ -647,7 +647,7 @@ app.post('/api/cross', async (req, res) => {
     }
 
     // Kiểm tra và tự động ẩn task khi đủ lượt
-    const taskLogs = await CrossLog.find({ taskId });
+    taskLogs = await CrossLog.find({ taskId });
     if (taskLogs.length >= task.maxSlots) {
       task.hidden = true;
       await task.save();
