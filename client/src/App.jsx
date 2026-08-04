@@ -1140,7 +1140,7 @@ export default function App() {
       const earnedPoints = currentPoints - initialPoints;
       return {
         id: u.id,
-        displayName: u.displayName,
+        displayName: u.displayName || u.fullName, // Fallback to fullName if displayName doesn't exist
         count: uLogs.length,
         initialPoints,
         earnedPoints,
@@ -1641,7 +1641,7 @@ export default function App() {
                     }`}
                   >
                     <ShieldCheck className="w-4 h-4 text-indigo-400" />
-                    <span>{u.displayName}</span>
+                    <span>{u.displayName || u.fullName || u.id}</span>
                   </button>
                 ))}
               </div>
@@ -1802,7 +1802,7 @@ export default function App() {
                       {index + 1}
                     </div>
                     <div>
-                      <p className="font-medium text-slate-100">{user.displayName}</p>
+                      <p className="font-medium text-slate-100">{user.displayName || user.fullName || user.id}</p>
                       <p className="text-xs text-slate-400">{user.count} nhiệm vụ đã chéo</p>
                     </div>
                   </div>
