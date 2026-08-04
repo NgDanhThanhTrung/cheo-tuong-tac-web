@@ -131,7 +131,18 @@ app.get('/api/users', async (req, res) => {
     const users = await User.find();
     const publicUsers = users.map(user => ({
       id: user.customId,
-      displayName: `${maskName(user.fullName)} ${user.customId} (${maskPhone(user.phone)})`
+      displayName: `${maskName(user.fullName)} ${user.customId} (${maskPhone(user.phone)})`,
+      fullName: user.fullName,
+      level: user.level || 1,
+      xp: user.xp || 0,
+      totalTasksCompleted: user.totalTasksCompleted || 0,
+      badges: user.badges || [],
+      currentStreak: user.currentStreak || 0,
+      longestStreak: user.longestStreak || 0,
+      categoryStats: user.categoryStats || { tiktok: 0, facebook: 0, shopee: 0, youtube: 0 },
+      initialPoints: user.initialPoints,
+      currentPoints: user.currentPoints,
+      tiktokDailyCount: user.tiktokDailyCount || 0
     }));
     res.json(publicUsers);
   } catch (error) {
@@ -279,7 +290,7 @@ app.get('/api/logs', async (req, res) => {
         ...log.toObject(),
         id: log._id.toString(),
         taskId: log.taskId.toString(),
-        doneByUserId: log.doneByUserId.toString(),
+        doneByUserId: user ? user.customId : log.doneByUserId.toString(), // Return customId instead of ObjectId
         taskTitle: task ? task.title : 'Unknown',
         userName: user ? user.fullName : 'Unknown'
       };
@@ -699,7 +710,12 @@ app.get('/api/leaderboard', async (req, res) => {
 app.get('/api/categories', async (req, res) => {
   try {
     const categories = await Category.find();
-    res.json(categories);
+    // Transform categories to ensure consistent id field
+    const transformedCategories = categories.map(category => ({
+      ...category.toObject(),
+      id: category._id.toString() // Use _id as id for categories
+    }));
+    res.json(transformedCategories);
   } catch (error) {
     console.error('Error fetching categories:', error);
     res.status(500).json({ error: 'Lỗi server' });
@@ -783,14 +799,20 @@ app.delete('/api/categories/:id', async (req, res) => {
 
 app.get('/api/admin/users', async (req, res) => {
   const { password } = req.query;
-  
+
   if (password !== ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Sai mật khẩu admin' });
   }
 
   try {
     const users = await User.find();
-    res.json(users);
+    // Transform users to ensure consistent id field (customId)
+    const transformedUsers = users.map(user => ({
+      ...user.toObject(),
+      id: user.customId, // Explicitly set id to customId
+      _id: user._id.toString() // Keep _id as string for reference
+    }));
+    res.json(transformedUsers);
   } catch (error) {
     console.error('Error fetching admin users:', error);
     res.status(500).json({ error: 'Lỗi server' });
@@ -808,8 +830,8 @@ app.post('/api/admin/users', async (req, res) => {
 
   try {
     // Generate next ID
-    const lastUser = await User.findOne().sort({ id: -1 });
-    const lastIdNum = lastUser ? parseInt(lastUser.id.replace('#', '')) : 1023;
+    const lastUser = await User.findOne().sort({ customId: -1 });
+    const lastIdNum = lastUser ? parseInt(lastUser.customId.replace('#', '')) : 1023;
     const nextId = `#${lastIdNum + 1}`;
 
     const newUser = new User({
@@ -838,13 +860,13 @@ app.post('/api/admin/users', async (req, res) => {
 
 app.put('/api/admin/users/:id', async (req, res) => {
   const { password, fullName, phone, initialPoints, currentPoints, xp, level } = req.body;
-  
+
   if (password !== ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Sai mật khẩu admin' });
   }
 
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findOne({ customId: req.params.id });
     if (!user) return res.status(404).json({ error: 'User không tồn tại' });
 
     if (fullName) user.fullName = fullName;
@@ -864,22 +886,22 @@ app.put('/api/admin/users/:id', async (req, res) => {
 
 app.delete('/api/admin/users/:id', async (req, res) => {
   const { password } = req.body;
-  
+
   if (password !== ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Sai mật khẩu admin' });
   }
 
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findOne({ customId: req.params.id });
     if (!user) return res.status(404).json({ error: 'User không tồn tại' });
 
-    // Xóa các task của user
+    // Xóa các task của user (userId là customId string)
     await Task.deleteMany({ userId: req.params.id });
-    
-    // Xóa các log của user
-    await CrossLog.deleteMany({ doneByUserId: req.params.id });
 
-    await User.findByIdAndDelete(req.params.id);
+    // Xóa các log của user (doneByUserId là ObjectId)
+    await CrossLog.deleteMany({ doneByUserId: user._id });
+
+    await User.deleteOne({ customId: req.params.id });
     res.json({ message: 'Đã xóa user thành công' });
   } catch (error) {
     console.error('Error deleting user:', error);
@@ -891,14 +913,38 @@ app.delete('/api/admin/users/:id', async (req, res) => {
 
 app.get('/api/admin/tasks', async (req, res) => {
   const { password } = req.query;
-  
+
   if (password !== ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Sai mật khẩu admin' });
   }
 
   try {
-    const tasks = await Task.find().populate('categoryId').populate('userId');
-    res.json(tasks);
+    const tasks = await Task.find();
+    const categories = await Category.find();
+    const users = await User.find();
+
+    // Transform tasks to ensure consistent id field and proper relationships
+    const transformedTasks = tasks.map(task => {
+      const category = categories.find(c => c._id.toString() === task.categoryId?.toString());
+      const user = users.find(u => u.customId === task.userId);
+
+      return {
+        ...task.toObject(),
+        id: task._id.toString(), // Use _id as id for tasks
+        categoryId: task.categoryId?.toString(),
+        category: category ? {
+          id: category._id.toString(),
+          name: category.name,
+          icon: category.icon,
+          color: category.color
+        } : null,
+        userId: task.userId, // Keep userId as is (customId string)
+        userLevel: user ? user.level : 1,
+        userXP: user ? user.xp : 0
+      };
+    });
+
+    res.json(transformedTasks);
   } catch (error) {
     console.error('Error fetching admin tasks:', error);
     res.status(500).json({ error: 'Lỗi server' });
@@ -1268,7 +1314,8 @@ async function seedData() {
   try {
     // Check if data already exists
     const existingCategories = await Category.countDocuments();
-    if (existingCategories > 0) {
+    const existingUsers = await User.countDocuments();
+    if (existingCategories > 0 && existingUsers > 0) {
       console.log('Dữ liệu đã tồn tại, bỏ qua seeding');
       return;
     }
@@ -1416,7 +1463,7 @@ async function seedData() {
 
     // Create a sample log
     const task = await Task.findOne({ title: 'Like & Comment bài Shopee' });
-    const user = await User.findOne({ id: '#1024' });
+    const user = await User.findOne({ customId: '#1024' });
     if (task && user) {
       await CrossLog.create({
         taskId: task._id,
@@ -1430,8 +1477,8 @@ async function seedData() {
   }
 }
 
-// Seed data on startup (commented out for now - uncomment after MongoDB is configured)
-// seedData();
+// Seed data on startup
+seedData();
 
 // Serve frontend static build
 app.use(express.static(path.join(__dirname, 'client/dist')));

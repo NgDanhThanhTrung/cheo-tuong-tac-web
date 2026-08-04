@@ -42,6 +42,8 @@ function AdminPage({ isAdmin, adminPassword }) {
   const [newUserPhone, setNewUserPhone] = useState('');
   const [newUserInitialPoints, setNewUserInitialPoints] = useState(10);
   const [newUserCurrentPoints, setNewUserCurrentPoints] = useState(10);
+  const [newUserXP, setNewUserXP] = useState(0);
+  const [newUserLevel, setNewUserLevel] = useState(1);
   
   // Task form state
   const [isTaskModal, setIsTaskModal] = useState(false);
@@ -189,7 +191,9 @@ function AdminPage({ isAdmin, adminPassword }) {
           fullName: newUserName, 
           phone: newUserPhone, 
           initialPoints: newUserInitialPoints,
-          currentPoints: newUserCurrentPoints
+          currentPoints: newUserCurrentPoints,
+          xp: newUserXP,
+          level: newUserLevel
         })
       });
       if (response.ok) {
@@ -199,6 +203,8 @@ function AdminPage({ isAdmin, adminPassword }) {
         setNewUserPhone('');
         setNewUserInitialPoints(10);
         setNewUserCurrentPoints(10);
+        setNewUserXP(0);
+        setNewUserLevel(1);
       }
     } catch (error) {
       console.error('Error adding user:', error);
@@ -216,7 +222,9 @@ function AdminPage({ isAdmin, adminPassword }) {
           fullName: newUserName, 
           phone: newUserPhone, 
           initialPoints: newUserInitialPoints,
-          currentPoints: newUserCurrentPoints
+          currentPoints: newUserCurrentPoints,
+          xp: newUserXP,
+          level: newUserLevel
         })
       });
       if (response.ok) {
@@ -227,6 +235,8 @@ function AdminPage({ isAdmin, adminPassword }) {
         setNewUserPhone('');
         setNewUserInitialPoints(10);
         setNewUserCurrentPoints(10);
+        setNewUserXP(0);
+        setNewUserLevel(1);
       }
     } catch (error) {
       console.error('Error editing user:', error);
@@ -257,6 +267,8 @@ function AdminPage({ isAdmin, adminPassword }) {
     setNewUserPhone(user.phone);
     setNewUserInitialPoints(user.initialPoints);
     setNewUserCurrentPoints(user.currentPoints);
+    setNewUserXP(user.xp || 0);
+    setNewUserLevel(user.level || 1);
     setIsUserModal(true);
   };
 
@@ -582,7 +594,7 @@ function AdminPage({ isAdmin, adminPassword }) {
               </button>
             </div>
 
-            <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-hidden">
+            <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-slate-900/50">
                   <tr>
@@ -591,6 +603,16 @@ function AdminPage({ isAdmin, adminPassword }) {
                     <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">SĐT</th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Điểm khởi đầu</th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Điểm hiện tại</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">XP</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Level</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Tasks</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Streak</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">TikTok</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Facebook</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Shopee</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">YouTube</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Badges</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Ngày tạo</th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Thao tác</th>
                   </tr>
                 </thead>
@@ -602,6 +624,16 @@ function AdminPage({ isAdmin, adminPassword }) {
                       <td className="px-4 py-3 text-sm font-mono">{user.phone}</td>
                       <td className="px-4 py-3 text-sm">{user.initialPoints}</td>
                       <td className="px-4 py-3 text-sm">{user.currentPoints}</td>
+                      <td className="px-4 py-3 text-sm">{user.xp || 0}</td>
+                      <td className="px-4 py-3 text-sm">{user.level || 1}</td>
+                      <td className="px-4 py-3 text-sm">{user.totalTasksCompleted || 0}</td>
+                      <td className="px-4 py-3 text-sm">{user.currentStreak || 0}/{user.longestStreak || 0}</td>
+                      <td className="px-4 py-3 text-sm">{user.categoryStats?.tiktok || 0}</td>
+                      <td className="px-4 py-3 text-sm">{user.categoryStats?.facebook || 0}</td>
+                      <td className="px-4 py-3 text-sm">{user.categoryStats?.shopee || 0}</td>
+                      <td className="px-4 py-3 text-sm">{user.categoryStats?.youtube || 0}</td>
+                      <td className="px-4 py-3 text-sm">{user.badges?.length || 0}</td>
+                      <td className="px-4 py-3 text-sm">{user.createdAt ? new Date(user.createdAt).toLocaleDateString('vi-VN') : '-'}</td>
                       <td className="px-4 py-3 text-sm">
                         <div className="flex gap-2">
                           <button
@@ -649,56 +681,99 @@ function AdminPage({ isAdmin, adminPassword }) {
               </button>
             </div>
 
-            <div className="space-y-4">
-              {tasks.map(task => {
-                const category = categories.find(c => c.id === task.categoryId || c._id === task.categoryId);
-                const user = users.find(u => u.id === task.userId || u._id === task.userId);
-                const taskLogs = logs.filter(l => l.taskId === task.id || l.taskId === task._id);
-                
-                return (
-                  <div 
-                    key={task.id || task._id}
-                    className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm font-mono text-slate-400">{task.id || task._id}</span>
-                          {category && (
+            <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-900/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">ID</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Title</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Link</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Category</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Creator</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Points</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Slots</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Co-op</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Priority</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Hidden</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Auto Delete</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Ngày tạo</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tasks.map(task => {
+                    const category = categories.find(c => c.id === task.categoryId || c._id === task.categoryId);
+                    const user = users.find(u => u.id === task.userId || u._id === task.userId);
+                    const taskLogs = logs.filter(l => l.taskId === task.id || l.taskId === task._id);
+                    
+                    return (
+                      <tr key={task.id || task._id} className="border-t border-slate-700/50">
+                        <td className="px-4 py-3 text-sm font-mono">{task.id || task._id}</td>
+                        <td className="px-4 py-3 text-sm">{task.title}</td>
+                        <td className="px-4 py-3 text-sm font-mono max-w-xs truncate">{task.link}</td>
+                        <td className="px-4 py-3 text-sm">
+                          {category ? (
                             <span 
                               className="px-2 py-1 rounded text-xs font-medium"
                               style={{ backgroundColor: `${category.color}20`, color: category.color }}
                             >
                               {category.icon} {category.name}
                             </span>
-                          )}
-                        </div>
-                        <h3 className="font-semibold text-lg">{task.title}</h3>
-                        <p className="text-sm text-slate-400 mt-1">{task.link}</p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-slate-400">
-                          <span>Creator: {user?.fullName || task.userId}</span>
-                          <span>Points: {task.points}</span>
-                          <span>Slots: {taskLogs.length}/{task.maxSlots}</span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => startEditTask(task)}
-                          className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-indigo-400 transition"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteTask(task.id || task._id)}
-                          className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-rose-400 transition"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+                          ) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm">{user?.fullName || task.userId}</td>
+                        <td className="px-4 py-3 text-sm">{task.points}</td>
+                        <td className="px-4 py-3 text-sm">{taskLogs.length}/{task.maxSlots}</td>
+                        <td className="px-4 py-3 text-sm">
+                          {task.isCoop ? (
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-blue-500/20 text-blue-400">
+                              {task.participants?.length || 0}/{task.requiredParticipants}
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {task.isPriority ? (
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-amber-500/20 text-amber-400">
+                              Lv{task.priorityLevel}
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {task.hidden ? (
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-rose-500/20 text-rose-400">
+                              Hidden
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {task.autoDeleteAt ? (
+                            <span className="text-xs">
+                              {task.autoDeleteType} ({new Date(task.autoDeleteAt).toLocaleDateString('vi-VN')})
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm">{task.createdAt ? new Date(task.createdAt).toLocaleDateString('vi-VN') : '-'}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => startEditTask(task)}
+                              className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-indigo-400 transition"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTask(task.id || task._id)}
+                              className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-rose-400 transition"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -717,25 +792,29 @@ function AdminPage({ isAdmin, adminPassword }) {
               </button>
             </div>
 
-            <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-hidden">
+            <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-slate-900/50">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">ID</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">User</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Task</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Thời gian</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">User ID</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">User Name</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Task ID</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Task Title</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Ngày tạo</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Cập nhật</th>
                   </tr>
                 </thead>
                 <tbody>
                   {logs.map(log => (
                     <tr key={log._id || log.id} className="border-t border-slate-700/50">
                       <td className="px-4 py-3 text-sm font-mono">{log._id || log.id}</td>
+                      <td className="px-4 py-3 text-sm font-mono">{log.doneByUserId?._id || log.doneByUserId}</td>
                       <td className="px-4 py-3 text-sm">{log.userName}</td>
+                      <td className="px-4 py-3 text-sm font-mono">{log.taskId?._id || log.taskId}</td>
                       <td className="px-4 py-3 text-sm">{log.taskTitle}</td>
-                      <td className="px-4 py-3 text-sm text-slate-400">
-                        {new Date(log.createdAt).toLocaleString('vi-VN')}
-                      </td>
+                      <td className="px-4 py-3 text-sm">{log.createdAt ? new Date(log.createdAt).toLocaleString('vi-VN') : '-'}</td>
+                      <td className="px-4 py-3 text-sm">{log.updatedAt ? new Date(log.updatedAt).toLocaleString('vi-VN') : '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -873,7 +952,7 @@ function AdminPage({ isAdmin, adminPassword }) {
                     required
                   />
                 </div>
-                <div className="mb-6">
+                <div className="mb-4">
                   <label className="block text-sm font-medium mb-2">Điểm hiện tại</label>
                   <input
                     type="number"
@@ -882,6 +961,26 @@ function AdminPage({ isAdmin, adminPassword }) {
                     className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white"
                     min="0"
                     required
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">XP</label>
+                  <input
+                    type="number"
+                    value={newUserXP}
+                    onChange={(e) => setNewUserXP(e.target.value)}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white"
+                    min="0"
+                  />
+                </div>
+                <div className="mb-6">
+                  <label className="block text-sm font-medium mb-2">Level</label>
+                  <input
+                    type="number"
+                    value={newUserLevel}
+                    onChange={(e) => setNewUserLevel(e.target.value)}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white"
+                    min="1"
                   />
                 </div>
                 <div className="flex gap-3">
@@ -894,6 +993,8 @@ function AdminPage({ isAdmin, adminPassword }) {
                       setNewUserPhone('');
                       setNewUserInitialPoints(10);
                       setNewUserCurrentPoints(10);
+                      setNewUserXP(0);
+                      setNewUserLevel(1);
                     }}
                     className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 rounded-lg transition"
                   >
@@ -928,9 +1029,9 @@ function AdminPage({ isAdmin, adminPassword }) {
                     required
                   >
                     <option value="">Chọn user</option>
-                    {users.map(user => (
-                      <option key={user.id} value={user.id}>
-                        {user.id} - {user.fullName}
+                    {users && users.length > 0 && users.map(user => (
+                      <option key={user.customId || user.id} value={user.customId || user.id}>
+                        {user.customId || user.id} - {user.fullName}
                       </option>
                     ))}
                   </select>
@@ -944,8 +1045,8 @@ function AdminPage({ isAdmin, adminPassword }) {
                     required
                   >
                     <option value="">Chọn category</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>
+                    {categories && categories.length > 0 && categories.map(cat => (
+                      <option key={cat._id || cat.id} value={cat._id || cat.id}>
                         {cat.icon} {cat.name}
                       </option>
                     ))}
@@ -1049,6 +1150,7 @@ export default function App() {
 
   const [phoneInput, setPhoneInput] = useState('');
   const [nameInput, setNameInput] = useState('');
+  const [isLoginModal, setIsLoginModal] = useState(false);
   const [isRegisterModal, setIsRegisterModal] = useState(false);
   const [isAddTaskModal, setIsAddTaskModal] = useState(false);
   
@@ -1057,6 +1159,9 @@ export default function App() {
   const [newTaskCategoryId, setNewTaskCategoryId] = useState('');
   const [newTaskIsCoop, setNewTaskIsCoop] = useState(false);
   const [newTaskRequiredParticipants, setNewTaskRequiredParticipants] = useState(2);
+  
+  // Track which tasks the user has clicked the link for
+  const [clickedLinks, setClickedLinks] = useState(new Set());
 
   // Check if admin page
   const isAdminPage = window.location.pathname.startsWith('/admin/');
@@ -1134,7 +1239,7 @@ export default function App() {
 
   useEffect(() => {
     const stats = users.map(u => {
-      const uLogs = logs.filter(l => l.doneByUserId === u.id);
+      const uLogs = logs.filter(l => l.doneByUserId === u.id || l.doneByUserId === u.customId);
       const currentPoints = u.currentPoints || 0;
       const initialPoints = u.initialPoints || 0;
       const earnedPoints = currentPoints - initialPoints;
@@ -1152,36 +1257,57 @@ export default function App() {
     setLeaderboard(stats);
   }, [users, tasks, logs]);
 
-  const handleAuth = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     if (!phoneInput) return;
 
-    const maskedP = '***' + phoneInput.slice(-4);
-    const words = nameInput.trim().split(/\s+/);
-    const maskedN = words.slice(-2).join(' ');
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneInput })
+      });
 
-    const userId = currentUser ? currentUser.id : `#${1024 + users.length}`;
-    const displayName = `${maskedN || 'Thành Viên'} ${userId} (${maskedP})`;
-
-    const loggedUser = {
-      id: userId,
-      fullName: nameInput || 'Thành Viên',
-      phone: phoneInput,
-      displayName,
-      initialPoints: 10,
-      currentPoints: 10,
-      tiktokDailyCount: 0
-    };
-
-    setCurrentUser(loggedUser);
-
-    if (!users.some(u => u.id === userId)) {
-      setUsers([...users, { id: userId, displayName, initialPoints: 10, currentPoints: 10, tiktokDailyCount: 0 }]);
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentUser(data.user);
+        setIsLoginModal(false);
+        setPhoneInput('');
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Đăng nhập thất bại');
+      }
+    } catch (error) {
+      console.error('Error logging in:', error);
+      alert('Lỗi server');
     }
+  };
 
-    setPhoneInput('');
-    setNameInput('');
-    setIsRegisterModal(false);
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    if (!phoneInput || !nameInput) return;
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneInput, fullName: nameInput })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentUser(data.user);
+        setIsRegisterModal(false);
+        setPhoneInput('');
+        setNameInput('');
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Đăng ký thất bại');
+      }
+    } catch (error) {
+      console.error('Error registering:', error);
+      alert('Lỗi server');
+    }
   };
 
   const handleLogout = () => {
@@ -1305,7 +1431,7 @@ export default function App() {
     }
   };
 
-  const handleCrossTask = (taskId, link) => {
+  const handleOpenLink = (taskId, link) => {
     if (!currentUser) {
       alert('Vui lòng đăng nhập để thực hiện nhiệm vụ!');
       return;
@@ -1335,7 +1461,27 @@ export default function App() {
       }
     }
 
+    // Mark as clicked
+    setClickedLinks(prev => new Set([...prev, taskId]));
+    
+    // Open link in new tab
     window.open(link, '_blank');
+  };
+
+  const handleConfirmTask = (taskId) => {
+    if (!currentUser) {
+      alert('Vui lòng đăng nhập để thực hiện nhiệm vụ!');
+      return;
+    }
+
+    const task = tasks.find(t => t.id === taskId || t._id === taskId);
+    if (!task) return;
+
+    // Check if user has clicked the link
+    if (!clickedLinks.has(taskId)) {
+      alert('Hệ thống kiểm tra thấy bạn chưa chân thực');
+      return;
+    }
 
     const isDone = logs.some(l => (l.taskId === taskId || l.taskId === taskId) && l.doneByUserId === currentUser.id);
     if (!isDone) {
@@ -1493,13 +1639,22 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => setIsRegisterModal(true)}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm px-4 py-2 rounded-lg transition"
-              >
-                <LogIn className="w-4 h-4" />
-                Đăng nhập / Đăng ký
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsLoginModal(true)}
+                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm px-4 py-2 rounded-lg transition"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Đăng nhập
+                </button>
+                <button
+                  onClick={() => setIsRegisterModal(true)}
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-medium text-sm px-4 py-2 rounded-lg transition"
+                >
+                  <UserCheck className="w-4 h-4" />
+                  Đăng ký
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -1647,10 +1802,18 @@ export default function App() {
               </div>
             </div>
 
-            {/* Tasks Grid */}
-            <div className="grid md:grid-cols-2 gap-4">
-              {userTasks.map(task => {
+            {/* Tasks List */}
+            <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-700/50">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Users className="w-5 h-5 text-indigo-400" />
+                  Danh sách Nhiệm vụ
+                </h2>
+              </div>
+              <div className="divide-y divide-slate-700/50">
+              {userTasks.map((task, index) => {
                 const category = categories.find(c => c.id === task.categoryId);
+                const taskOwner = users.find(u => u.id === task.userId);
                 const isDone = currentUser && logs.some(l => l.taskId === task.id && l.doneByUserId === currentUser.id);
                 const isSelf = currentUser && currentUser.id === task.userId;
                 const usedSlots = logs.filter(l => l.taskId === task.id).length;
@@ -1663,33 +1826,47 @@ export default function App() {
                 const tiktokLimitReached = isTikTokTask && tiktokCount >= 3;
 
                 return (
-                  <div 
-                    key={task.id} 
-                    className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 flex flex-col justify-between hover:border-slate-600 transition"
+                  <div
+                    key={task.id}
+                    className="px-6 py-4 flex items-center justify-between hover:bg-slate-700/30 transition"
                   >
-                    <div>
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                        index === 0 ? 'bg-amber-500 text-white' :
+                        index === 1 ? 'bg-slate-400 text-white' :
+                        index === 2 ? 'bg-amber-700 text-white' :
+                        'bg-slate-700 text-slate-300'
+                      }`}>
+                        {index + 1}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
                           {task.isPriority && (
-                            <span className="px-2 py-1 rounded text-xs font-medium bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-300">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-300">
                               ⭐ Priority {task.priorityLevel}
                             </span>
                           )}
                           {task.isCoop && (
-                            <span className="px-2 py-1 rounded text-xs font-medium bg-purple-500/10 border border-purple-500/30 text-purple-300">
+                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/10 border border-purple-500/30 text-purple-300">
                               🤝 Co-op
                             </span>
                           )}
                           {category && (
-                            <span 
-                              className="text-lg px-2 py-1 rounded-lg"
+                            <span
+                              className="text-lg px-2 py-0.5 rounded-lg"
                               style={{ backgroundColor: `${category.color}20` }}
                             >
                               {category.icon}
                             </span>
                           )}
-                          <h3 className="font-semibold text-slate-100 text-base">{task.title}</h3>
+                          <h3 className="font-semibold text-slate-100">{task.title}</h3>
                         </div>
+                        <p className="text-xs text-slate-400 font-mono truncate">{task.link}</p>
+                        <p className="text-xs text-slate-500">Chủ sở hữu: {taskOwner?.displayName || taskOwner?.fullName || task.userId}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
                         <div className="flex items-center gap-2">
                           <span className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-mono">
                             +{task.points} điểm
@@ -1700,8 +1877,8 @@ export default function App() {
                             </span>
                           )}
                           <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${
-                            isFull 
-                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' 
+                            isFull
+                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                               : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
                           }`}>
                             {remainingSlots}/{task.maxSlots || 10} lượt
@@ -1717,12 +1894,7 @@ export default function App() {
                           )}
                         </div>
                       </div>
-                      <p className="text-xs text-slate-400 font-mono truncate mb-4">{task.link}</p>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-700/40">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-500">Chủ sở hữu: {selectedUserId}</span>
                         {isSelf && !task.isPriority && (
                           <button
                             onClick={() => handleMakePriority(task.id, 1)}
@@ -1733,48 +1905,53 @@ export default function App() {
                             Priority
                           </button>
                         )}
-                      </div>
-                      
-                      {isSelf ? (
-                        <span className="text-xs text-slate-400 italic">Bài của bạn</span>
-                      ) : isFull ? (
-                        <span className="text-xs text-rose-400 font-medium">Hết lượt</span>
-                      ) : tiktokLimitReached ? (
-                        <span className="text-xs text-rose-400 font-medium">Đạt giới hạn ngày</span>
-                      ) : (
-                        <button
-                          onClick={() => handleCrossTask(task.id, task.link)}
-                          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition ${
-                            isDone
-                              ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
-                              : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-                          }`}
-                        >
-                          {isDone ? (
-                            <>
-                              <CheckCircle2 className="w-3 h-3" />
-                              Đã chéo
-                            </>
-                          ) : (
-                            <>
+                        {isSelf ? (
+                          <span className="text-xs text-slate-400 italic">Bài của bạn</span>
+                        ) : isFull ? (
+                          <span className="text-xs text-rose-400 font-medium">Hết lượt</span>
+                        ) : tiktokLimitReached ? (
+                          <span className="text-xs text-rose-400 font-medium">Đạt giới hạn ngày</span>
+                        ) : isDone ? (
+                          <span className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Đã chéo
+                          </span>
+                        ) : (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleOpenLink(task.id, task.link)}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                                clickedLinks.has(task.id)
+                                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                  : 'bg-slate-700 hover:bg-slate-600 text-white'
+                              }`}
+                            >
                               <ExternalLink className="w-3 h-3" />
-                              Xác nhận đã chéo
-                            </>
-                          )}
-                        </button>
-                      )}
+                              {clickedLinks.has(task.id) ? 'Đã xem' : 'Bấm link'}
+                            </button>
+                            <button
+                              onClick={() => handleConfirmTask(task.id)}
+                              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition"
+                            >
+                              <CheckCircle2 className="w-3 h-3" />
+                              Xác nhận
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
               })}
-            </div>
-
-            {userTasks.length === 0 && (
-              <div className="text-center py-12 text-slate-400">
-                <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Không có nhiệm vụ nào cho thành viên này</p>
               </div>
-            )}
+
+              {userTasks.length === 0 && (
+                <div className="text-center py-12 text-slate-400">
+                  <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>Không có nhiệm vụ nào cho thành viên này</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -1821,12 +1998,12 @@ export default function App() {
         )}
       </main>
 
-      {/* Auth Modal */}
-      {isRegisterModal && (
+      {/* Login Modal */}
+      {isLoginModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold mb-4">Đăng nhập / Đăng ký</h2>
-            <form onSubmit={handleAuth}>
+            <h2 className="text-xl font-bold mb-4">Đăng nhập</h2>
+            <form onSubmit={handleLogin}>
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-2">Số điện thoại</label>
                 <input
@@ -1838,20 +2015,13 @@ export default function App() {
                   required
                 />
               </div>
-              <div className="mb-6">
-                <label className="block text-sm font-medium mb-2">Họ tên (chỉ khi đăng ký lần đầu)</label>
-                <input
-                  type="text"
-                  value={nameInput}
-                  onChange={(e) => setNameInput(e.target.value)}
-                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white"
-                  placeholder="Nguyễn Văn A"
-                />
-              </div>
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsRegisterModal(false)}
+                  onClick={() => {
+                    setIsLoginModal(false);
+                    setPhoneInput('');
+                  }}
                   className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 rounded-lg transition"
                 >
                   Hủy
@@ -1864,6 +2034,84 @@ export default function App() {
                 </button>
               </div>
             </form>
+            <p className="text-center text-sm text-slate-400 mt-4">
+              Chưa có tài khoản?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLoginModal(false);
+                  setIsRegisterModal(true);
+                }}
+                className="text-indigo-400 hover:text-indigo-300"
+              >
+                Đăng ký ngay
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Register Modal */}
+      {isRegisterModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-md w-full mx-4">
+            <h2 className="text-xl font-bold mb-4">Đăng ký</h2>
+            <form onSubmit={handleRegister}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Số điện thoại</label>
+                <input
+                  type="tel"
+                  value={phoneInput}
+                  onChange={(e) => setPhoneInput(e.target.value)}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white"
+                  placeholder="09xxxxxxxxx"
+                  required
+                />
+              </div>
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-2">Họ tên</label>
+                <input
+                  type="text"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white"
+                  placeholder="Nguyễn Văn A"
+                  required
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRegisterModal(false);
+                    setPhoneInput('');
+                    setNameInput('');
+                  }}
+                  className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 rounded-lg transition"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-green-600 hover:bg-green-500 text-white font-medium py-2 rounded-lg transition"
+                >
+                  Đăng ký
+                </button>
+              </div>
+            </form>
+            <p className="text-center text-sm text-slate-400 mt-4">
+              Đã có tài khoản?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRegisterModal(false);
+                  setIsLoginModal(true);
+                }}
+                className="text-indigo-400 hover:text-indigo-300"
+              >
+                Đăng nhập ngay
+              </button>
+            </p>
           </div>
         </div>
       )}

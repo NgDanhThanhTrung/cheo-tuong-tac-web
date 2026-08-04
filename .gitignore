@@ -2,4 +2,10 @@ node_modules/
 client/dist/
 client/node_modules/
 .env
+.env.local
+.env.*.local
 *.db
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
