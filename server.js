@@ -32,12 +32,6 @@ mongoose.connect(MONGODB_URI)
 app.use(cors());
 app.use(express.json());
 
-// ==================== MONGOOSE MODELS ====================
-const User = require('./models/User');
-const Category = require('./models/Category');
-const Task = require('./models/Task');
-const CrossLog = require('./models/CrossLog');
-
 // Admin password từ biến môi trường (bắt buộc trong production)
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 if (!ADMIN_PASSWORD) {
