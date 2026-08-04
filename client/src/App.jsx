@@ -14,7 +14,8 @@ import {
   Trash2,
   Edit,
   Filter,
-  Award
+  Award,
+  MessageCircle
 } from 'lucide-react';
 
 // Admin Page Component
@@ -1041,6 +1042,9 @@ export default function App() {
   const [isAchievementsModal, setIsAchievementsModal] = useState(false);
   const [userBadges, setUserBadges] = useState([]);
   const [badgeDefinitions, setBadgeDefinitions] = useState(null);
+  const [isCommunityChatModal, setIsCommunityChatModal] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [newChatMessage, setNewChatMessage] = useState('');
   const [activeTab, setActiveTab] = useState('tasks');
 
   const [phoneInput, setPhoneInput] = useState('');
@@ -1218,6 +1222,89 @@ export default function App() {
     }
   };
 
+  const handleLoadChat = async () => {
+    try {
+      const chatRes = await fetch('/api/chat');
+      if (chatRes.ok) {
+        const chatData = await chatRes.json();
+        setChatMessages(chatData || []);
+      }
+    } catch (error) {
+      console.error('Error loading chat:', error);
+    }
+  };
+
+  const handleSendChat = async (e) => {
+    e.preventDefault();
+    if (!currentUser || !newChatMessage.trim()) return;
+
+    try {
+      const chatRes = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          userName: currentUser.fullName,
+          message: newChatMessage
+        })
+      });
+
+      if (chatRes.ok) {
+        setNewChatMessage('');
+        handleLoadChat();
+      }
+    } catch (error) {
+      console.error('Error sending chat:', error);
+      alert('Lỗi khi gửi tin nhắn');
+    }
+  };
+
+  const handleMakePriority = async (taskId, priorityLevel = 1) => {
+    if (!currentUser) return;
+
+    const costs = { 1: 30, 2: 50 };
+    const cost = costs[priorityLevel];
+
+    if (!confirm(`Bạn có chắc muốn làm task thành priority? Chi phí: ${cost} điểm`)) return;
+
+    try {
+      const priorityRes = await fetch(`/api/tasks/${taskId}/priority`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          priorityLevel
+        })
+      });
+
+      if (priorityRes.ok) {
+        alert('Task đã được làm thành priority!');
+        // Reload tasks
+        const tasksRes = await fetch('/api/tasks');
+        if (tasksRes.ok) {
+          const tasksData = await tasksRes.json();
+          setTasks(tasksData);
+        }
+        // Reload users
+        const usersRes = await fetch('/api/users');
+        if (usersRes.ok) {
+          const usersData = await usersRes.json();
+          setUsers(usersData);
+          const updatedUser = usersData.find(u => u.id === currentUser.id);
+          if (updatedUser) {
+            setCurrentUser(updatedUser);
+          }
+        }
+      } else {
+        const errorData = await priorityRes.json();
+        alert(errorData.error || 'Lỗi khi làm priority');
+      }
+    } catch (error) {
+      console.error('Error making priority:', error);
+      alert('Lỗi khi làm priority');
+    }
+  };
+
   const handleCrossTask = (taskId, link) => {
     if (!currentUser) {
       alert('Vui lòng đăng nhập để thực hiện nhiệm vụ!');
@@ -1385,6 +1472,16 @@ export default function App() {
                     title="Huy hiệu & Thành tựu"
                   >
                     <Award className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsCommunityChatModal(true);
+                      handleLoadChat();
+                    }}
+                    className="ml-2 p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-blue-400 transition"
+                    title="Chat Cộng đồng"
+                  >
+                    <MessageCircle className="w-4 h-4" />
                   </button>
                 </div>
                 <button 
@@ -1573,6 +1670,11 @@ export default function App() {
                     <div>
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
+                          {task.isPriority && (
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-300">
+                              ⭐ Priority {task.priorityLevel}
+                            </span>
+                          )}
                           {task.isCoop && (
                             <span className="px-2 py-1 rounded text-xs font-medium bg-purple-500/10 border border-purple-500/30 text-purple-300">
                               🤝 Co-op
@@ -1619,7 +1721,19 @@ export default function App() {
                     </div>
 
                     <div className="flex items-center justify-between pt-3 border-t border-slate-700/40">
-                      <span className="text-xs text-slate-500">Chủ sở hữu: {selectedUserId}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500">Chủ sở hữu: {selectedUserId}</span>
+                        {isSelf && !task.isPriority && (
+                          <button
+                            onClick={() => handleMakePriority(task.id, 1)}
+                            className="text-xs text-amber-400 hover:text-amber-300 transition flex items-center gap-1"
+                            title="Làm Priority (30 điểm)"
+                          >
+                            <Sparkles className="w-3 h-3" />
+                            Priority
+                          </button>
+                        )}
+                      </div>
                       
                       {isSelf ? (
                         <span className="text-xs text-slate-400 italic">Bài của bạn</span>
@@ -1998,6 +2112,72 @@ export default function App() {
                 })}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Community Chat Modal */}
+      {isCommunityChatModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <MessageCircle className="w-6 h-6 text-blue-400" />
+                Chat Cộng đồng
+              </h2>
+              <button
+                onClick={() => setIsCommunityChatModal(false)}
+                className="p-2 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition"
+              >
+                <span className="text-2xl">×</span>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto mb-4 p-4 bg-slate-900/50 rounded-xl space-y-3 max-h-96">
+              {chatMessages.length === 0 ? (
+                <p className="text-center text-slate-400">Chưa có tin nhắn nào</p>
+              ) : (
+                chatMessages.map((chat) => (
+                  <div
+                    key={chat.id}
+                    className={`p-3 rounded-lg ${
+                      chat.userId === currentUser?.id
+                        ? 'bg-blue-600/20 border border-blue-500/30 ml-8'
+                        : 'bg-slate-700/50 border border-slate-600/30 mr-8'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-medium text-slate-200">{chat.userName}</span>
+                      <span className="text-xs text-slate-400">
+                        {new Date(chat.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-300">{chat.message}</p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <form onSubmit={handleSendChat} className="flex gap-2">
+              <input
+                type="text"
+                value={newChatMessage}
+                onChange={(e) => setNewChatMessage(e.target.value)}
+                className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white"
+                placeholder="Nhập tin nhắn..."
+                maxLength={200}
+              />
+              <button
+                type="submit"
+                disabled={!newChatMessage.trim()}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Gửi
+              </button>
+            </form>
+            <p className="text-xs text-slate-400 mt-2 text-center">
+              ⚠️ Tin nhắn sẽ tự động xóa sau 1 tiếng
+            </p>
           </div>
         </div>
       )}

@@ -14,7 +14,12 @@ const taskSchema = new mongoose.Schema({
   isCoop: { type: Boolean, default: false }, // Task có phải co-op không
   requiredParticipants: { type: Number, default: 2 }, // Số người cần tham gia
   participants: [{ type: String }], // Danh sách userId đã tham gia
-  coopStatus: { type: String, enum: ['pending', 'matched', 'completed'], default: 'pending' } // Trạng thái co-op
+  coopStatus: { type: String, enum: ['pending', 'matched', 'completed'], default: 'pending' }, // Trạng thái co-op
+  // Priority/Premium Task Fields
+  isPriority: { type: Boolean, default: false }, // Task có phải priority không
+  priorityLevel: { type: Number, default: 0 }, // Level ưu tiên (0: normal, 1: premium, 2: super)
+  priorityCost: { type: Number, default: 0 }, // Chi phí để làm priority
+  priorityExpiresAt: { type: Date, default: null } // Thời gian hết hạn priority
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
@@ -29,6 +34,11 @@ taskSchema.virtual('id').get(function() {
 // Virtual để kiểm tra task đã đầy đủ participants chưa
 taskSchema.virtual('isFullCoop').get(function() {
   return this.isCoop && this.participants.length >= this.requiredParticipants;
+});
+
+// Virtual để kiểm tra task còn priority không
+taskSchema.virtual('isPriorityActive').get(function() {
+  return this.isPriority && (!this.priorityExpiresAt || new Date() < this.priorityExpiresAt);
 });
 
 module.exports = mongoose.model('Task', taskSchema);

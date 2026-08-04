@@ -58,6 +58,22 @@
 - **UI Display**: Hiển thị badge count trên header và leaderboard
 - **Achievements Modal**: Modal xem tất cả badges và progress
 
+### ⭐ Priority Task System
+- **Priority Tasks**: Task có thể được làm ưu tiên để hiển thị đầu tiên
+- **Chi phí**: 30 điểm cho Priority Level 1, 50 điểm cho Priority Level 2
+- **Thời hạn**: Priority hiệu lực trong 24 giờ
+- **Ưu tiên hiển thị**: Priority task luôn hiển thị trước tất cả task khác
+- **UI Button**: Nút "Priority" cho chủ task để nâng cấp
+- **Auto-expiry**: Tự động xóa priority sau 24 giờ
+
+### 💬 Chat Cộng đồng
+- **Real-time chat**: Chat cộng đồng cho tất cả user
+- **Auto-delete**: Tin nhắn tự động xóa sau 1 tiếng
+- **User info**: Hiển thị tên người gửi và thời gian
+- **Message limit**: Tối đa 200 ký tự mỗi tin nhắn
+- **Cron job**: Chạy mỗi 5 phút để xóa tin nhắn hết hạn
+- **UI**: Modal chat với scroll và auto-load
+
 ### �🔐 Admin Panel
 - **Truy cập**: `/admin` (nhập mật khẩu từ biến môi trường)
 - **Quản lý đầy đủ**:

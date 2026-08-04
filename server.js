@@ -5,6 +5,13 @@ const mongoose = require('mongoose');
 const cron = require('node-cron');
 require('dotenv').config();
 
+// Models
+const User = require('./models/User');
+const Category = require('./models/Category');
+const Task = require('./models/Task');
+const CrossLog = require('./models/CrossLog');
+const CommunityChat = require('./models/CommunityChat');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -176,11 +183,19 @@ app.get('/api/tasks', async (req, res) => {
       };
     });
     
-    // Sort theo level user (cao hơn -> ưu tiên), sau đó theo thời gian tạo (mới hơn -> ưu tiên)
-    // Co-op task ưu tiên hơn regular task
+    // Sort theo priority (cao hơn -> ưu tiên), sau đó level user (cao hơn -> ưu tiên), sau đó theo thời gian tạo (mới hơn -> ưu tiên)
     tasksWithCategory.sort((a, b) => {
+      // Priority task đầu tiên
+      if (b.isPriority !== a.isPriority) {
+        return b.isPriority ? 1 : -1;
+      }
+      // Cùng priority thì level cao hơn trước
+      if (b.isPriority && a.isPriority && b.priorityLevel !== a.priorityLevel) {
+        return b.priorityLevel - a.priorityLevel;
+      }
+      // Co-op task ưu tiên hơn regular task
       if (b.isCoop !== a.isCoop) {
-        return b.isCoop ? 1 : -1; // Co-op task lên trước
+        return b.isCoop ? 1 : -1;
       }
       if (b.userLevel !== a.userLevel) {
         return b.userLevel - a.userLevel; // Level cao hơn lên trước
@@ -1031,6 +1046,97 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'client/dist/index.html'));
 });
 
+// ==================== COMMUNITY CHAT ====================
+
+// API để lấy tin nhắn chat cộng đồng
+app.get('/api/chat', async (req, res) => {
+  try {
+    const chats = await CommunityChat.find().sort({ createdAt: -1 }).limit(50);
+    res.json(chats);
+  } catch (error) {
+    console.error('Error fetching chats:', error);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
+// API để gửi tin nhắn chat cộng đồng
+app.post('/api/chat', async (req, res) => {
+  const { userId, userName, message } = req.body;
+  
+  if (!userId || !userName || !message) {
+    return res.status(400).json({ error: 'Thiếu thông tin tin nhắn' });
+  }
+
+  try {
+    const newChat = new CommunityChat({
+      userId,
+      userName,
+      message,
+      autoDeleteAt: new Date(Date.now() + 60 * 60 * 1000) // 1 tiếng sau
+    });
+    await newChat.save();
+    res.status(201).json(newChat);
+  } catch (error) {
+    console.error('Error sending chat:', error);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
+// API để xóa tin nhắn
+app.delete('/api/chat/:id', async (req, res) => {
+  try {
+    await CommunityChat.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting chat:', error);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
+// ==================== PRIORITY TASK SYSTEM ====================
+
+// API để làm task thành priority
+app.post('/api/tasks/:id/priority', async (req, res) => {
+  const { userId, priorityLevel } = req.body;
+  
+  if (!userId) {
+    return res.status(400).json({ error: 'Thiếu userId' });
+  }
+
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ error: 'Task không tồn tại' });
+    if (task.userId !== userId) return res.status(403).json({ error: 'Bạn không phải chủ task' });
+
+    const user = await User.findOne({ customId: userId });
+    if (!user) return res.status(404).json({ error: 'User không tồn tại' });
+
+    // Chi phí priority
+    const costs = { 1: 30, 2: 50 }; // Level 1: 30 điểm, Level 2: 50 điểm
+    const cost = costs[priorityLevel] || 30;
+
+    if (user.currentPoints < cost) {
+      return res.status(400).json({ error: `Bạn cần ${cost} điểm để làm priority` });
+    }
+
+    // Trừ điểm
+    user.currentPoints -= cost;
+    await user.save();
+
+    // Update task
+    task.isPriority = true;
+    task.priorityLevel = priorityLevel || 1;
+    task.priorityCost = cost;
+    task.priorityExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 giờ
+    await task.save();
+
+    res.json(task);
+  } catch (error) {
+    console.error('Error making task priority:', error);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
 // ==================== AUTO DELETE TASKS ====================
 
 // Hàm xóa các nhiệm vụ đã hết hạn
@@ -1105,10 +1211,61 @@ cron.schedule('*/5 * * * *', checkAndDelete24hTasks, {
   timezone: 'Asia/Ho_Chi_Minh'
 });
 
+// Chạy kiểm tra xóa tin nhắn chat sau 1 tiếng mỗi 5 phút
+async function deleteExpiredChats() {
+  try {
+    const now = new Date();
+    const deletedChats = await CommunityChat.deleteMany({
+      autoDeleteAt: { $lt: now }
+    });
+    
+    if (deletedChats.deletedCount > 0) {
+      console.log(`Đã xóa ${deletedChats.deletedCount} tin nhắn chat hết hạn vào ${now.toLocaleString('vi-VN')}`);
+    }
+  } catch (error) {
+    console.error('Lỗi khi xóa tin nhắn chat hết hạn:', error);
+  }
+}
+
+cron.schedule('*/5 * * * *', deleteExpiredChats, {
+  timezone: 'Asia/Ho_Chi_Minh'
+});
+
+// Chạy kiểm tra priority task expiry mỗi 5 phút
+async function checkPriorityExpiry() {
+  try {
+    const now = new Date();
+    const expiredTasks = await Task.find({
+      isPriority: true,
+      priorityExpiresAt: { $lt: now }
+    });
+    
+    for (const task of expiredTasks) {
+      task.isPriority = false;
+      task.priorityLevel = 0;
+      task.priorityCost = 0;
+      task.priorityExpiresAt = null;
+      await task.save();
+    }
+    
+    if (expiredTasks.length > 0) {
+      console.log(`Đã xóa priority cho ${expiredTasks.length} task hết hạn vào ${now.toLocaleString('vi-VN')}`);
+    }
+  } catch (error) {
+    console.error('Lỗi khi kiểm tra priority expiry:', error);
+  }
+}
+
+cron.schedule('*/5 * * * *', checkPriorityExpiry, {
+  timezone: 'Asia/Ho_Chi_Minh'
+});
+
 // Chạy kiểm tra ngay khi server khởi động
 setTimeout(() => {
   deleteExpiredTasks();
   checkAndDelete24hTasks();
+  deleteExpiredChats();
+  checkPriorityExpiry();
 }, 5000); // Chờ 5 giây để MongoDB kết nối xong
 
 // ==================== SEED DATA ====================

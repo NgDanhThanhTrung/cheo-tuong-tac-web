@@ -1,6 +1,6 @@
 {
   "name": "cheo-tuong-tac-monorepo",
-  "version": "9.0.0",
+  "version": "10.0.0",
   "private": true,
   "scripts": {
     "install-all": "npm install && npm install --prefix client",
