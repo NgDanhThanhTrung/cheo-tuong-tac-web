@@ -1879,7 +1879,7 @@ export default function App() {
                 setCurrentUser(updatedUser);
               }
             });
-            alert('Đã hoàn thành nhiệm vụ (Admin auto-complete)!');
+            alert('Đã hoàn thành nhiệm vụ (Admin auto-complete) - Slots đã được mở rộng nếu cần!');
           }
         })
         .catch(error => {

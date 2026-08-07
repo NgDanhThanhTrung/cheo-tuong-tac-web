@@ -578,11 +578,20 @@ app.post('/api/cross', async (req, res) => {
       }
     }
 
-    // Kiểm tra số lượt còn lại - Admin bypass
+    // Kiểm tra số lượt còn lại - Admin bypass và ưu tiên
     if (!isAdmin) {
       const taskLogs = await CrossLog.find({ taskId });
       if (taskLogs.length >= task.maxSlots) {
         return res.status(400).json({ error: 'Nhiệm vụ đã hết lượt' });
+      }
+    } else {
+      // Admin có thể mở rộng slots khi cần
+      const taskLogs = await CrossLog.find({ taskId });
+      if (taskLogs.length >= task.maxSlots) {
+        // Admin tự động mở rộng slots khi nhận task
+        task.maxSlots = taskLogs.length + 1;
+        await task.save();
+        console.log(`Admin ${user.customId} mở rộng slots cho task ${task.title} lên ${task.maxSlots}`);
       }
     }
 
