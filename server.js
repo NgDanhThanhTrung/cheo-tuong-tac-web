@@ -1028,6 +1028,73 @@ app.delete('/api/admin/tasks/:id', async (req, res) => {
   }
 });
 
+// ==================== ADMIN SCHEMA VIEW ====================
+
+app.get('/api/admin/schema', async (req, res) => {
+  const { password } = req.query;
+
+  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Sai mật khẩu admin' });
+  }
+
+  try {
+    const schemas = {
+      User: {
+        fields: User.schema.paths,
+        virtuals: User.schema.virtuals,
+        methods: Object.getOwnPropertyNames(User.schema.methods).filter(m => typeof User.schema.methods[m] === 'function'),
+        statics: Object.getOwnPropertyNames(User.schema.statics).filter(s => typeof User.schema.statics[s] === 'function')
+      },
+      Category: {
+        fields: Category.schema.paths,
+        virtuals: Category.schema.virtuals
+      },
+      Task: {
+        fields: Task.schema.paths,
+        virtuals: Task.schema.virtuals
+      },
+      CrossLog: {
+        fields: CrossLog.schema.paths,
+        virtuals: CrossLog.schema.virtuals
+      }
+    };
+
+    // Format schema paths for better readability
+    const formattedSchemas = {};
+    for (const [modelName, schemaData] of Object.entries(schemas)) {
+      formattedSchemas[modelName] = {
+        fields: {},
+        virtuals: {},
+        methods: schemaData.methods || [],
+        statics: schemaData.statics || []
+      };
+
+      for (const [fieldName, fieldInfo] of Object.entries(schemaData.fields)) {
+        formattedSchemas[modelName].fields[fieldName] = {
+          type: fieldInfo.instance,
+          required: fieldInfo.isRequired,
+          default: fieldInfo.defaultValue,
+          unique: fieldInfo.isUnique,
+          enum: fieldInfo.enumValues ? fieldInfo.enumValues.map(v => v.value) : undefined
+        };
+      }
+
+      for (const [virtualName, virtualInfo] of Object.entries(schemaData.virtuals)) {
+        formattedSchemas[modelName].virtuals[virtualName] = {
+          path: virtualInfo.path,
+          getters: Object.keys(virtualInfo.getters),
+          setters: Object.keys(virtualInfo.setters)
+        };
+      }
+    }
+
+    res.json(formattedSchemas);
+  } catch (error) {
+    console.error('Error fetching schema:', error);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
 // ==================== ADMIN LOGS MANAGEMENT ====================
 
 app.get('/api/admin/logs', async (req, res) => {

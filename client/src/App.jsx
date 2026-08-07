@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  UserCheck, 
-  LogIn, 
-  LogOut, 
-  PlusCircle, 
-  ExternalLink, 
-  Trophy, 
-  CheckCircle2, 
-  Users, 
+import {
+  UserCheck,
+  LogIn,
+  LogOut,
+  PlusCircle,
+  ExternalLink,
+  Trophy,
+  CheckCircle2,
+  Users,
   ShieldCheck,
   Sparkles,
   Settings,
@@ -25,6 +25,7 @@ function AdminPage({ isAdmin, adminPassword }) {
   const [users, setUsers] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [schemas, setSchemas] = useState(null);
   const [password, setPassword] = useState(adminPassword || '');
   
   // Category form state
@@ -61,6 +62,7 @@ function AdminPage({ isAdmin, adminPassword }) {
       fetchUsers();
       fetchTasks();
       fetchLogs();
+      fetchSchemas();
     }
   }, [isAdmin, password]);
 
@@ -107,6 +109,18 @@ function AdminPage({ isAdmin, adminPassword }) {
       }
     } catch (error) {
       console.error('Error fetching logs:', error);
+    }
+  };
+
+  const fetchSchemas = async () => {
+    try {
+      const response = await fetch(`/api/admin/schema?password=${password}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSchemas(data);
+      }
+    } catch (error) {
+      console.error('Error fetching schemas:', error);
     }
   };
 
@@ -505,6 +519,15 @@ function AdminPage({ isAdmin, adminPassword }) {
             <Trophy className="w-4 h-4" />
             Logs
           </button>
+          <button
+            onClick={() => setActiveTab('schema')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
+              activeTab === 'schema' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            Schema
+          </button>
         </div>
 
         {/* Categories Tab */}
@@ -825,6 +848,146 @@ function AdminPage({ isAdmin, adminPassword }) {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Schema Tab */}
+        {activeTab === 'schema' && (
+          <div>
+            <div className="flex justify-between items-center mb-8">
+              <h1 className="text-2xl font-bold">Database Schema</h1>
+              <button
+                onClick={fetchSchemas}
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg transition"
+              >
+                <Edit className="w-4 h-4" />
+                Refresh Schema
+              </button>
+            </div>
+
+            {schemas ? (
+              <div className="space-y-6">
+                {Object.entries(schemas).map(([modelName, schemaData]) => (
+                  <div key={modelName} className="bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-700/50 bg-slate-900/30">
+                      <h2 className="text-xl font-bold text-indigo-400">{modelName}</h2>
+                    </div>
+                    <div className="p-6">
+                      {/* Fields */}
+                      <div className="mb-6">
+                        <h3 className="text-lg font-semibold mb-3 text-slate-200">Fields</h3>
+                        <div className="bg-slate-900/50 rounded-xl overflow-hidden">
+                          <table className="w-full">
+                            <thead className="bg-slate-800/50">
+                              <tr>
+                                <th className="px-4 py-2 text-left text-sm font-medium text-slate-400">Field Name</th>
+                                <th className="px-4 py-2 text-left text-sm font-medium text-slate-400">Type</th>
+                                <th className="px-4 py-2 text-left text-sm font-medium text-slate-400">Required</th>
+                                <th className="px-4 py-2 text-left text-sm font-medium text-slate-400">Default</th>
+                                <th className="px-4 py-2 text-left text-sm font-medium text-slate-400">Unique</th>
+                                <th className="px-4 py-2 text-left text-sm font-medium text-slate-400">Enum</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {Object.entries(schemaData.fields).map(([fieldName, fieldInfo]) => (
+                                <tr key={fieldName} className="border-t border-slate-700/50">
+                                  <td className="px-4 py-2 text-sm font-mono text-slate-200">{fieldName}</td>
+                                  <td className="px-4 py-2 text-sm text-indigo-400">{fieldInfo.type}</td>
+                                  <td className="px-4 py-2 text-sm">
+                                    {fieldInfo.required ? (
+                                      <span className="text-emerald-400">✓</span>
+                                    ) : (
+                                      <span className="text-slate-500">-</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-2 text-sm text-slate-400">
+                                    {fieldInfo.default !== undefined ? String(fieldInfo.default) : '-'}
+                                  </td>
+                                  <td className="px-4 py-2 text-sm">
+                                    {fieldInfo.unique ? (
+                                      <span className="text-amber-400">✓</span>
+                                    ) : (
+                                      <span className="text-slate-500">-</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-2 text-sm text-slate-400">
+                                    {fieldInfo.enum ? fieldInfo.enum.join(', ') : '-'}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Virtuals */}
+                      {Object.keys(schemaData.virtuals).length > 0 && (
+                        <div className="mb-6">
+                          <h3 className="text-lg font-semibold mb-3 text-slate-200">Virtuals</h3>
+                          <div className="bg-slate-900/50 rounded-xl overflow-hidden">
+                            <table className="w-full">
+                              <thead className="bg-slate-800/50">
+                                <tr>
+                                  <th className="px-4 py-2 text-left text-sm font-medium text-slate-400">Virtual Name</th>
+                                  <th className="px-4 py-2 text-left text-sm font-medium text-slate-400">Getters</th>
+                                  <th className="px-4 py-2 text-left text-sm font-medium text-slate-400">Setters</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {Object.entries(schemaData.virtuals).map(([virtualName, virtualInfo]) => (
+                                  <tr key={virtualName} className="border-t border-slate-700/50">
+                                    <td className="px-4 py-2 text-sm font-mono text-slate-200">{virtualName}</td>
+                                    <td className="px-4 py-2 text-sm text-purple-400">
+                                      {virtualInfo.getters.length > 0 ? virtualInfo.getters.join(', ') : '-'}
+                                    </td>
+                                    <td className="px-4 py-2 text-sm text-pink-400">
+                                      {virtualInfo.setters.length > 0 ? virtualInfo.setters.join(', ') : '-'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Methods */}
+                      {schemaData.methods && schemaData.methods.length > 0 && (
+                        <div className="mb-6">
+                          <h3 className="text-lg font-semibold mb-3 text-slate-200">Instance Methods</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {schemaData.methods.map(method => (
+                              <span key={method} className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-lg text-sm font-mono">
+                                {method}()
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Statics */}
+                      {schemaData.statics && schemaData.statics.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold mb-3 text-slate-200">Static Methods</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {schemaData.statics.map(staticMethod => (
+                              <span key={staticMethod} className="px-3 py-1 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-lg text-sm font-mono">
+                                {staticMethod}()
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-slate-400">
+                <Edit className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Đang tải schema...</p>
+              </div>
+            )}
           </div>
         )}
 
