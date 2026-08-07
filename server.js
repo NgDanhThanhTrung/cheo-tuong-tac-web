@@ -1071,6 +1071,52 @@ app.get('/api/admin/raw-data', async (req, res) => {
   }
 });
 
+app.put('/api/admin/raw-data', async (req, res) => {
+  const { password, model, documentId, data } = req.body;
+
+  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Sai mật khẩu admin' });
+  }
+
+  if (!model || !documentId || !data) {
+    return res.status(400).json({ error: 'Thiếu thông tin model, documentId hoặc data' });
+  }
+
+  try {
+    let Model;
+    switch (model) {
+      case 'users':
+        Model = User;
+        break;
+      case 'categories':
+        Model = Category;
+        break;
+      case 'tasks':
+        Model = Task;
+        break;
+      case 'logs':
+        Model = CrossLog;
+        break;
+      default:
+        return res.status(400).json({ error: 'Model không hợp lệ' });
+    }
+
+    const document = await Model.findById(documentId);
+    if (!document) {
+      return res.status(404).json({ error: 'Document không tồn tại' });
+    }
+
+    // Update document with new data
+    Object.assign(document, data);
+    await document.save();
+
+    res.json({ message: 'Đã cập nhật document thành công', document });
+  } catch (error) {
+    console.error('Error updating raw data:', error);
+    res.status(500).json({ error: 'Lỗi server', details: error.message });
+  }
+});
+
 // ==================== ADMIN SCHEMA VIEW ====================
 
 app.get('/api/admin/schema', async (req, res) => {

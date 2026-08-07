@@ -28,6 +28,10 @@ function AdminPage({ isAdmin, adminPassword }) {
   const [schemas, setSchemas] = useState(null);
   const [rawData, setRawData] = useState(null);
   const [selectedModel, setSelectedModel] = useState('all');
+  const [editingDocument, setEditingDocument] = useState(null);
+  const [editingModel, setEditingModel] = useState(null);
+  const [editingJson, setEditingJson] = useState('');
+  const [isEditModal, setIsEditModal] = useState(false);
   const [password, setPassword] = useState(adminPassword || '');
   
   // Category form state
@@ -139,6 +143,48 @@ function AdminPage({ isAdmin, adminPassword }) {
       }
     } catch (error) {
       console.error('Error fetching raw data:', error);
+    }
+  };
+
+  const handleEditDocument = (model, document) => {
+    setEditingModel(model);
+    setEditingDocument(document);
+    setEditingJson(JSON.stringify(document, null, 2));
+    setIsEditModal(true);
+  };
+
+  const handleSaveDocument = async () => {
+    try {
+      let parsedData;
+      try {
+        parsedData = JSON.parse(editingJson);
+      } catch (error) {
+        alert('JSON không hợp lệ! Vui lòng kiểm tra lại.');
+        return;
+      }
+
+      const response = await fetch('/api/admin/raw-data', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          password,
+          model: editingModel,
+          documentId: editingDocument._id,
+          data: parsedData
+        })
+      });
+
+      if (response.ok) {
+        alert('Đã cập nhật document thành công!');
+        setIsEditModal(false);
+        fetchRawData(selectedModel);
+      } else {
+        const errorData = await response.json();
+        alert(`Lỗi: ${errorData.error || 'Không thể cập nhật document'}`);
+      }
+    } catch (error) {
+      console.error('Error saving document:', error);
+      alert('Lỗi khi lưu document');
     }
   };
 
@@ -1077,7 +1123,16 @@ function AdminPage({ isAdmin, adminPassword }) {
                             <div key={index} className="bg-slate-900/50 rounded-xl overflow-hidden">
                               <div className="px-4 py-2 bg-slate-800/50 border-b border-slate-700/50 flex justify-between items-center">
                                 <span className="text-sm font-mono text-slate-400">Document {index + 1}</span>
-                                <span className="text-xs text-slate-500 font-mono">{doc._id || doc.id}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-slate-500 font-mono">{doc._id || doc.id}</span>
+                                  <button
+                                    onClick={() => handleEditDocument(modelName, doc)}
+                                    className="flex items-center gap-1 px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs rounded transition"
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                    Edit
+                                  </button>
+                                </div>
                               </div>
                               <pre className="p-4 text-xs text-slate-300 overflow-x-auto font-mono leading-relaxed">
                                 {JSON.stringify(doc, null, 2)}
@@ -1100,6 +1155,45 @@ function AdminPage({ isAdmin, adminPassword }) {
                 <p>Đang tải dữ liệu...</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* JSON Edit Modal */}
+        {isEditModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Edit Document - {editingModel}</h2>
+                <button
+                  onClick={() => setIsEditModal(false)}
+                  className="text-slate-400 hover:text-white transition"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <textarea
+                  value={editingJson}
+                  onChange={(e) => setEditingJson(e.target.value)}
+                  className="w-full h-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-xs text-slate-300 font-mono resize-none"
+                  spellCheck={false}
+                />
+              </div>
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => setIsEditModal(false)}
+                  className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 rounded-lg transition"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleSaveDocument}
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 rounded-lg transition"
+                >
+                  Lưu thay đổi
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
