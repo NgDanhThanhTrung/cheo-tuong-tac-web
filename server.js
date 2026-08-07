@@ -1028,6 +1028,49 @@ app.delete('/api/admin/tasks/:id', async (req, res) => {
   }
 });
 
+// ==================== ADMIN RAW DATA VIEW ====================
+
+app.get('/api/admin/raw-data', async (req, res) => {
+  const { password, model } = req.query;
+
+  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Sai mật khẩu admin' });
+  }
+
+  try {
+    let rawData = {};
+
+    if (!model || model === 'users') {
+      const users = await User.find().lean();
+      rawData.users = users;
+    }
+
+    if (!model || model === 'categories') {
+      const categories = await Category.find().lean();
+      rawData.categories = categories;
+    }
+
+    if (!model || model === 'tasks') {
+      const tasks = await Task.find().lean();
+      rawData.tasks = tasks;
+    }
+
+    if (!model || model === 'logs') {
+      const logs = await CrossLog.find().lean();
+      rawData.logs = logs;
+    }
+
+    if (model && model !== 'users' && model !== 'categories' && model !== 'tasks' && model !== 'logs') {
+      return res.status(400).json({ error: 'Model không hợp lệ. Chọn: users, categories, tasks, logs' });
+    }
+
+    res.json(rawData);
+  } catch (error) {
+    console.error('Error fetching raw data:', error);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+});
+
 // ==================== ADMIN SCHEMA VIEW ====================
 
 app.get('/api/admin/schema', async (req, res) => {

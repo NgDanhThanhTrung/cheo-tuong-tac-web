@@ -26,6 +26,8 @@ function AdminPage({ isAdmin, adminPassword }) {
   const [tasks, setTasks] = useState([]);
   const [logs, setLogs] = useState([]);
   const [schemas, setSchemas] = useState(null);
+  const [rawData, setRawData] = useState(null);
+  const [selectedModel, setSelectedModel] = useState('all');
   const [password, setPassword] = useState(adminPassword || '');
   
   // Category form state
@@ -63,6 +65,7 @@ function AdminPage({ isAdmin, adminPassword }) {
       fetchTasks();
       fetchLogs();
       fetchSchemas();
+      fetchRawData();
     }
   }, [isAdmin, password]);
 
@@ -121,6 +124,21 @@ function AdminPage({ isAdmin, adminPassword }) {
       }
     } catch (error) {
       console.error('Error fetching schemas:', error);
+    }
+  };
+
+  const fetchRawData = async (model = 'all') => {
+    try {
+      const url = model === 'all'
+        ? `/api/admin/raw-data?password=${password}`
+        : `/api/admin/raw-data?password=${password}&model=${model}`;
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        setRawData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching raw data:', error);
     }
   };
 
@@ -527,6 +545,15 @@ function AdminPage({ isAdmin, adminPassword }) {
           >
             <Settings className="w-4 h-4" />
             Schema
+          </button>
+          <button
+            onClick={() => setActiveTab('raw-data')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
+              activeTab === 'raw-data' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Edit className="w-4 h-4" />
+            Raw Data
           </button>
         </div>
 
@@ -986,6 +1013,91 @@ function AdminPage({ isAdmin, adminPassword }) {
               <div className="text-center py-12 text-slate-400">
                 <Edit className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>Đang tải schema...</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Raw Data Tab */}
+        {activeTab === 'raw-data' && (
+          <div>
+            <div className="flex justify-between items-center mb-8">
+              <h1 className="text-2xl font-bold">Raw MongoDB Data</h1>
+              <div className="flex gap-2">
+                <select
+                  value={selectedModel}
+                  onChange={(e) => {
+                    setSelectedModel(e.target.value);
+                    fetchRawData(e.target.value);
+                  }}
+                  className="bg-slate-700 border border-slate-600 text-white px-4 py-2 rounded-lg text-sm"
+                >
+                  <option value="all">All Models</option>
+                  <option value="users">Users</option>
+                  <option value="categories">Categories</option>
+                  <option value="tasks">Tasks</option>
+                  <option value="logs">Logs</option>
+                </select>
+                <button
+                  onClick={() => fetchRawData(selectedModel)}
+                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-2 rounded-lg transition"
+                >
+                  <Edit className="w-4 h-4" />
+                  Refresh Data
+                </button>
+              </div>
+            </div>
+
+            {rawData ? (
+              <div className="space-y-6">
+                {Object.entries(rawData).map(([modelName, data]) => (
+                  <div key={modelName} className="bg-slate-800/40 border border-slate-700/50 rounded-2xl overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-700/50 bg-slate-900/30 flex justify-between items-center">
+                      <h2 className="text-xl font-bold text-indigo-400 capitalize">{modelName} ({data.length} documents)</h2>
+                      <button
+                        onClick={() => {
+                          const jsonStr = JSON.stringify(data, null, 2);
+                          const blob = new Blob([jsonStr], { type: 'application/json' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${modelName}_raw_data.json`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-3 py-1.5 rounded-lg text-sm transition"
+                      >
+                        Download JSON
+                      </button>
+                    </div>
+                    <div className="p-6">
+                      {data.length > 0 ? (
+                        <div className="space-y-4">
+                          {data.map((doc, index) => (
+                            <div key={index} className="bg-slate-900/50 rounded-xl overflow-hidden">
+                              <div className="px-4 py-2 bg-slate-800/50 border-b border-slate-700/50 flex justify-between items-center">
+                                <span className="text-sm font-mono text-slate-400">Document {index + 1}</span>
+                                <span className="text-xs text-slate-500 font-mono">{doc._id || doc.id}</span>
+                              </div>
+                              <pre className="p-4 text-xs text-slate-300 overflow-x-auto font-mono leading-relaxed">
+                                {JSON.stringify(doc, null, 2)}
+                              </pre>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-slate-400">
+                          No documents found
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-slate-400">
+                <Edit className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Đang tải dữ liệu...</p>
               </div>
             )}
           </div>
