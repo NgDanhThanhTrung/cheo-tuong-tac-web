@@ -1070,12 +1070,19 @@ app.get('/api/admin/schema', async (req, res) => {
       };
 
       for (const [fieldName, fieldInfo] of Object.entries(schemaData.fields)) {
+        let enumValues = undefined;
+        if (fieldInfo.enumValues && Array.isArray(fieldInfo.enumValues)) {
+          enumValues = fieldInfo.enumValues
+            .filter(v => v !== null && v !== undefined)
+            .map(v => (v && typeof v === 'object' && v.value !== undefined) ? v.value : v);
+        }
+
         formattedSchemas[modelName].fields[fieldName] = {
           type: fieldInfo.instance,
           required: fieldInfo.isRequired,
           default: fieldInfo.defaultValue,
           unique: fieldInfo.isUnique,
-          enum: fieldInfo.enumValues ? fieldInfo.enumValues.map(v => v.value) : undefined
+          enum: enumValues
         };
       }
 
