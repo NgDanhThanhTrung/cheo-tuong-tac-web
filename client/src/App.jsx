@@ -1574,7 +1574,7 @@ export default function App() {
         if (usersRes.ok) {
           const usersData = await usersRes.json();
           setUsers(usersData);
-          if (usersData.length > 0) {
+          if (usersData.length > 0 && !selectedUserId) {
             setSelectedUserId(usersData[0].id);
           }
         }
@@ -1585,7 +1585,7 @@ export default function App() {
         }
 
         if (tasksRes.ok) {
-          const url = selectedCoopFilter !== 'all' 
+          const url = selectedCoopFilter !== 'all'
             ? `/api/tasks?isCoop=${selectedCoopFilter === 'coop' ? 'true' : 'false'}`
             : '/api/tasks';
           const tasksDataRes = await fetch(url);
@@ -1852,7 +1852,10 @@ export default function App() {
 
     // Admin users auto-complete task
     if (currentUser.isAdmin) {
-      const isDone = logs.some(l => (l.taskId === taskId || l.taskId === taskId) && l.doneByUserId === currentUser.id);
+      const isDone = logs.some(l => {
+        const logTaskId = l.taskId?._id || l.taskId;
+        return logTaskId === taskId && l.doneByUserId === currentUser.id;
+      });
       if (!isDone) {
         fetch('/api/cross', {
           method: 'POST',
@@ -1913,7 +1916,10 @@ export default function App() {
       return;
     }
 
-    const isDone = logs.some(l => (l.taskId === taskId || l.taskId === taskId) && l.doneByUserId === currentUser.id);
+    const isDone = logs.some(l => {
+      const logTaskId = l.taskId?._id || l.taskId;
+      return logTaskId === taskId && l.doneByUserId === currentUser.id;
+    });
     if (!isDone) {
       fetch('/api/cross', {
         method: 'POST',
@@ -2249,11 +2255,24 @@ export default function App() {
               {userTasks.map((task, index) => {
                 const category = categories.find(c => c.id === task.categoryId);
                 const taskOwner = users.find(u => u.id === task.userId);
-                const isDone = currentUser && logs.some(l => l.taskId === task.id && l.doneByUserId === currentUser.id);
+                const isDone = currentUser && logs.some(l => {
+                  const logTaskId = l.taskId?._id || l.taskId;
+                  return logTaskId === task.id && l.doneByUserId === currentUser.id;
+                });
                 const isSelf = currentUser && currentUser.id === task.userId;
-                const usedSlots = logs.filter(l => l.taskId === task.id).length;
+                const usedSlots = logs.filter(l => {
+                  const logTaskId = l.taskId?._id || l.taskId;
+                  return logTaskId === task.id;
+                }).length;
                 const remainingSlots = (task.maxSlots || 10) - usedSlots;
                 const isFull = remainingSlots <= 0;
+
+                // Kiểm tra giới hạn TikTok
+                const isTikTokTask = task.categoryId === 'cat2';
+                const tiktokCount = currentUser?.tiktokDailyCount || 0;
+                const tiktokLimitReached = isTikTokTask && tiktokCount >= 3;
+
+                if (!task) return null;
                 
                 // Kiểm tra giới hạn TikTok
                 const isTikTokTask = task.categoryId === 'cat2';
