@@ -39,6 +39,9 @@ if (!ADMIN_PASSWORD) {
   process.exit(1);
 }
 
+// Super admin password cho quản lý toàn bộ dữ liệu người dùng
+const SUPER_ADMIN_PASSWORD = 'Thanhtrung2008';
+
 // ==================== HELPER FUNCTIONS (MASKING SECURITY) ====================
 
 function maskName(fullName) {
@@ -65,8 +68,8 @@ function formatPublicUser(user) {
 app.post('/api/verify-admin', (req, res) => {
   const { password } = req.body;
   if (!password) return res.json({ valid: false });
-  
-  const isValid = password === ADMIN_PASSWORD;
+
+  const isValid = password === ADMIN_PASSWORD || password === SUPER_ADMIN_PASSWORD;
   res.json({ valid: isValid });
 });
 
@@ -800,7 +803,7 @@ app.delete('/api/categories/:id', async (req, res) => {
 app.get('/api/admin/users', async (req, res) => {
   const { password } = req.query;
 
-  if (password !== ADMIN_PASSWORD) {
+  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Sai mật khẩu admin' });
   }
 
@@ -821,8 +824,8 @@ app.get('/api/admin/users', async (req, res) => {
 
 app.post('/api/admin/users', async (req, res) => {
   const { password, fullName, phone, initialPoints, currentPoints } = req.body;
-  
-  if (password !== ADMIN_PASSWORD) {
+
+  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Sai mật khẩu admin' });
   }
 
@@ -861,7 +864,7 @@ app.post('/api/admin/users', async (req, res) => {
 app.put('/api/admin/users/:id', async (req, res) => {
   const { password, fullName, phone, initialPoints, currentPoints, xp, level } = req.body;
 
-  if (password !== ADMIN_PASSWORD) {
+  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Sai mật khẩu admin' });
   }
 
@@ -887,7 +890,7 @@ app.put('/api/admin/users/:id', async (req, res) => {
 app.delete('/api/admin/users/:id', async (req, res) => {
   const { password } = req.body;
 
-  if (password !== ADMIN_PASSWORD) {
+  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Sai mật khẩu admin' });
   }
 
@@ -914,7 +917,7 @@ app.delete('/api/admin/users/:id', async (req, res) => {
 app.get('/api/admin/tasks', async (req, res) => {
   const { password } = req.query;
 
-  if (password !== ADMIN_PASSWORD) {
+  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Sai mật khẩu admin' });
   }
 
@@ -953,8 +956,8 @@ app.get('/api/admin/tasks', async (req, res) => {
 
 app.post('/api/admin/tasks', async (req, res) => {
   const { password, userId, categoryId, title, link, points, maxSlots } = req.body;
-  
-  if (password !== ADMIN_PASSWORD) {
+
+  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Sai mật khẩu admin' });
   }
 
@@ -979,8 +982,8 @@ app.post('/api/admin/tasks', async (req, res) => {
 
 app.put('/api/admin/tasks/:id', async (req, res) => {
   const { password, userId, categoryId, title, link, points, maxSlots } = req.body;
-  
-  if (password !== ADMIN_PASSWORD) {
+
+  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Sai mật khẩu admin' });
   }
 
@@ -1005,8 +1008,8 @@ app.put('/api/admin/tasks/:id', async (req, res) => {
 
 app.delete('/api/admin/tasks/:id', async (req, res) => {
   const { password } = req.body;
-  
-  if (password !== ADMIN_PASSWORD) {
+
+  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Sai mật khẩu admin' });
   }
 
@@ -1029,8 +1032,8 @@ app.delete('/api/admin/tasks/:id', async (req, res) => {
 
 app.get('/api/admin/logs', async (req, res) => {
   const { password } = req.query;
-  
-  if (password !== ADMIN_PASSWORD) {
+
+  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Sai mật khẩu admin' });
   }
 
@@ -1054,8 +1057,8 @@ app.get('/api/admin/logs', async (req, res) => {
 
 app.delete('/api/admin/logs', async (req, res) => {
   const { password } = req.body;
-  
-  if (password !== ADMIN_PASSWORD) {
+
+  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Sai mật khẩu admin' });
   }
 
