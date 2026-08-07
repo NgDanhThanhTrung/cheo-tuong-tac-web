@@ -15,7 +15,8 @@ import {
   Edit,
   Filter,
   Award,
-  MessageCircle
+  MessageCircle,
+  Shield
 } from 'lucide-react';
 
 // Admin Page Component
@@ -1828,20 +1829,20 @@ export default function App() {
     const task = tasks.find(t => t.id === taskId || t._id === taskId);
     if (!task) return;
 
-    // Kiểm tra giới hạn TikTok hàng ngày (3 lần)
-    if (task.categoryId) {
+    // Kiểm tra giới hạn TikTok hàng ngày (3 lần) - Admin bypass
+    if (!currentUser.isAdmin && task.categoryId) {
       const category = categories.find(c => c._id === task.categoryId || c.id === task.categoryId);
       if (category && category.name.includes('TikTok')) {
         const today = new Date().toDateString();
         const tiktokCount = currentUser.tiktokDailyCount || 0;
         const lastDate = currentUser.lastTiktokDate;
-        
+
         if (lastDate !== today) {
           // Reset count nếu ngày mới
           currentUser.tiktokDailyCount = 0;
           currentUser.lastTiktokDate = today;
         }
-        
+
         if (currentUser.tiktokDailyCount >= 3) {
           alert('Bạn đã đạt giới hạn 3 lần chém giá TikTok trong ngày!');
           return;
@@ -1849,9 +1850,50 @@ export default function App() {
       }
     }
 
-    // Mark as clicked
-    setClickedLinks(prev => new Set([...prev, taskId]));
-    
+    // Admin users auto-complete task
+    if (currentUser.isAdmin) {
+      const isDone = logs.some(l => (l.taskId === taskId || l.taskId === taskId) && l.doneByUserId === currentUser.id);
+      if (!isDone) {
+        fetch('/api/cross', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ taskId, userId: currentUser.id })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            alert(data.error);
+          } else {
+            // Refresh data
+            Promise.all([
+              fetch('/api/users').then(r => r.json()),
+              fetch('/api/tasks').then(r => r.json()),
+              fetch('/api/logs').then(r => r.json())
+            ]).then(([usersData, tasksData, logsData]) => {
+              setUsers(usersData);
+              setTasks(tasksData);
+              setLogs(logsData);
+
+              const updatedUser = usersData.find(u => u.id === currentUser.id);
+              if (updatedUser) {
+                setCurrentUser(updatedUser);
+              }
+            });
+            alert('Đã hoàn thành nhiệm vụ (Admin auto-complete)!');
+          }
+        })
+        .catch(error => {
+          console.error('Error auto-completing task:', error);
+          alert('Lỗi khi hoàn thành nhiệm vụ');
+        });
+      } else {
+        alert('Bạn đã hoàn thành nhiệm vụ này rồi!');
+      }
+    } else {
+      // Regular users need to click confirm
+      setClickedLinks(prev => new Set([...prev, taskId]));
+    }
+
     // Open link in new tab
     window.open(link, '_blank');
   };
@@ -1990,6 +2032,11 @@ export default function App() {
                 <div className="text-sm">
                   <span className="text-slate-400">Chào, </span>
                   <span className="font-semibold text-indigo-400">{currentUser.fullName}</span>
+                  {currentUser.isAdmin && (
+                    <span className="ml-2 px-2 py-0.5 bg-rose-500/20 border border-rose-500/30 text-rose-400 rounded-full text-xs font-mono">
+                      Admin
+                    </span>
+                  )}
                   <span className="text-xs text-emerald-400 ml-2 font-mono">({currentUser.id})</span>
                   <span className="text-xs text-amber-400 ml-2 font-mono">💰 {currentUser.currentPoints || 0} điểm</span>
                   <span className="text-xs text-purple-400 ml-2 font-mono">⭐ Lvl {currentUser.level || 1}</span>
@@ -2306,24 +2353,36 @@ export default function App() {
                           </span>
                         ) : (
                           <div className="flex gap-2">
-                            <button
-                              onClick={() => handleOpenLink(task.id, task.link)}
-                              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition ${
-                                clickedLinks.has(task.id)
-                                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                                  : 'bg-slate-700 hover:bg-slate-600 text-white'
-                              }`}
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                              {clickedLinks.has(task.id) ? 'Đã xem' : 'Bấm link'}
-                            </button>
-                            <button
-                              onClick={() => handleConfirmTask(task.id)}
-                              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition"
-                            >
-                              <CheckCircle2 className="w-3 h-3" />
-                              Xác nhận
-                            </button>
+                            {currentUser.isAdmin ? (
+                              <button
+                                onClick={() => handleOpenLink(task.id, task.link)}
+                                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white transition"
+                              >
+                                <Sparkles className="w-3 h-3" />
+                                Auto-complete
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => handleOpenLink(task.id, task.link)}
+                                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                                    clickedLinks.has(task.id)
+                                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                      : 'bg-slate-700 hover:bg-slate-600 text-white'
+                                  }`}
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  {clickedLinks.has(task.id) ? 'Đã xem' : 'Bấm link'}
+                                </button>
+                                <button
+                                  onClick={() => handleConfirmTask(task.id)}
+                                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition"
+                                >
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  Xác nhận
+                                </button>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>

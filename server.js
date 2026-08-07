@@ -559,8 +559,11 @@ app.post('/api/cross', async (req, res) => {
     const user = await User.findOne({ customId: userId });
     if (!user) return res.status(404).json({ error: 'Người dùng không tồn tại' });
 
-    // Kiểm tra giới hạn TikTok hàng ngày (3 lần)
-    if (task.categoryId) {
+    // Admin users bypass các giới hạn
+    const isAdmin = user.isAdmin || false;
+
+    // Kiểm tra giới hạn TikTok hàng ngày (3 lần) - Admin bypass
+    if (!isAdmin && task.categoryId) {
       const category = await Category.findById(task.categoryId);
       if (category && category.name.includes('TikTok')) {
         const today = new Date().toDateString();
@@ -568,17 +571,19 @@ app.post('/api/cross', async (req, res) => {
           user.tiktokDailyCount = 0;
           user.lastTiktokDate = today;
         }
-        
+
         if (user.tiktokDailyCount >= 3) {
           return res.status(400).json({ error: 'Bạn đã đạt giới hạn 3 lần chém giá TikTok trong ngày' });
         }
       }
     }
 
-    // Kiểm tra số lượt còn lại
-    const taskLogs = await CrossLog.find({ taskId });
-    if (taskLogs.length >= task.maxSlots) {
-      return res.status(400).json({ error: 'Nhiệm vụ đã hết lượt' });
+    // Kiểm tra số lượt còn lại - Admin bypass
+    if (!isAdmin) {
+      const taskLogs = await CrossLog.find({ taskId });
+      if (taskLogs.length >= task.maxSlots) {
+        return res.status(400).json({ error: 'Nhiệm vụ đã hết lượt' });
+      }
     }
 
     const existed = await CrossLog.findOne({ taskId, doneByUserId: user._id });
