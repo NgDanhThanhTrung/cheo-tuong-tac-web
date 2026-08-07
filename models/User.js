@@ -31,7 +31,9 @@ const userSchema = new mongoose.Schema({
     facebook: { type: Number, default: 0 },
     shopee: { type: Number, default: 0 },
     youtube: { type: Number, default: 0 }
-  }
+  },
+  // Admin Rights
+  isAdmin: { type: Boolean, default: false }
 }, {
   timestamps: true,
   toJSON: { virtuals: true },

@@ -65,12 +65,27 @@ function formatPublicUser(user) {
 // ==================== API ENDPOINTS ====================
 
 // Verify admin password
-app.post('/api/verify-admin', (req, res) => {
-  const { password } = req.body;
-  if (!password) return res.json({ valid: false });
+app.post('/api/verify-admin', async (req, res) => {
+  const { password, userId } = req.body;
 
-  const isValid = password === ADMIN_PASSWORD || password === SUPER_ADMIN_PASSWORD;
-  res.json({ valid: isValid });
+  // Check if password matches admin passwords
+  if (password && (password === ADMIN_PASSWORD || password === SUPER_ADMIN_PASSWORD)) {
+    return res.json({ valid: true, method: 'password' });
+  }
+
+  // Check if user has admin rights
+  if (userId) {
+    try {
+      const user = await User.findOne({ customId: userId });
+      if (user && user.isAdmin) {
+        return res.json({ valid: true, method: 'user_admin' });
+      }
+    } catch (error) {
+      console.error('Error checking user admin rights:', error);
+    }
+  }
+
+  res.json({ valid: false });
 });
 
 // Auth
@@ -119,6 +134,7 @@ app.post('/api/auth/login', async (req, res) => {
         initialPoints: user.initialPoints,
         currentPoints: user.currentPoints,
         tiktokDailyCount: user.tiktokDailyCount,
+        isAdmin: user.isAdmin || false,
         displayName: `${maskedName} ${user.customId} (${maskedPhone})`
       }
     });
@@ -800,11 +816,33 @@ app.delete('/api/categories/:id', async (req, res) => {
 
 // ==================== ADMIN USERS MANAGEMENT ====================
 
-app.get('/api/admin/users', async (req, res) => {
-  const { password } = req.query;
+// Helper function to check admin rights
+async function checkAdminRights(password, userId) {
+  // Check password
+  if (password && (password === ADMIN_PASSWORD || password === SUPER_ADMIN_PASSWORD)) {
+    return true;
+  }
 
-  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Sai mật khẩu admin' });
+  // Check user admin rights
+  if (userId) {
+    try {
+      const user = await User.findOne({ customId: userId });
+      return user && user.isAdmin;
+    } catch (error) {
+      console.error('Error checking user admin rights:', error);
+      return false;
+    }
+  }
+
+  return false;
+}
+
+app.get('/api/admin/users', async (req, res) => {
+  const { password, userId } = req.query;
+
+  const hasAccess = await checkAdminRights(password, userId);
+  if (!hasAccess) {
+    return res.status(401).json({ error: 'Sai mật khẩu admin hoặc không có quyền admin' });
   }
 
   try {
@@ -823,10 +861,11 @@ app.get('/api/admin/users', async (req, res) => {
 });
 
 app.post('/api/admin/users', async (req, res) => {
-  const { password, fullName, phone, initialPoints, currentPoints } = req.body;
+  const { password, userId, fullName, phone, initialPoints, currentPoints, isAdmin } = req.body;
 
-  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Sai mật khẩu admin' });
+  const hasAccess = await checkAdminRights(password, userId);
+  if (!hasAccess) {
+    return res.status(401).json({ error: 'Sai mật khẩu admin hoặc không có quyền admin' });
   }
 
   if (!fullName || !phone) return res.status(400).json({ error: 'Họ tên và SĐT là bắt buộc' });
@@ -851,7 +890,8 @@ app.post('/api/admin/users', async (req, res) => {
       badges: [],
       currentStreak: 0,
       longestStreak: 0,
-      categoryStats: { tiktok: 0, facebook: 0, shopee: 0, youtube: 0 }
+      categoryStats: { tiktok: 0, facebook: 0, shopee: 0, youtube: 0 },
+      isAdmin: isAdmin || false
     });
     await newUser.save();
     res.status(201).json(newUser);
@@ -862,10 +902,11 @@ app.post('/api/admin/users', async (req, res) => {
 });
 
 app.put('/api/admin/users/:id', async (req, res) => {
-  const { password, fullName, phone, initialPoints, currentPoints, xp, level } = req.body;
+  const { password, userId, fullName, phone, initialPoints, currentPoints, xp, level, isAdmin } = req.body;
 
-  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Sai mật khẩu admin' });
+  const hasAccess = await checkAdminRights(password, userId);
+  if (!hasAccess) {
+    return res.status(401).json({ error: 'Sai mật khẩu admin hoặc không có quyền admin' });
   }
 
   try {
@@ -878,6 +919,7 @@ app.put('/api/admin/users/:id', async (req, res) => {
     if (currentPoints !== undefined) user.currentPoints = Number(currentPoints);
     if (xp !== undefined) user.xp = Number(xp);
     if (level !== undefined) user.level = Number(level);
+    if (isAdmin !== undefined) user.isAdmin = Boolean(isAdmin);
 
     await user.save();
     res.json(user);
@@ -888,10 +930,11 @@ app.put('/api/admin/users/:id', async (req, res) => {
 });
 
 app.delete('/api/admin/users/:id', async (req, res) => {
-  const { password } = req.body;
+  const { password, userId } = req.body;
 
-  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Sai mật khẩu admin' });
+  const hasAccess = await checkAdminRights(password, userId);
+  if (!hasAccess) {
+    return res.status(401).json({ error: 'Sai mật khẩu admin hoặc không có quyền admin' });
   }
 
   try {
@@ -915,10 +958,11 @@ app.delete('/api/admin/users/:id', async (req, res) => {
 // ==================== ADMIN TASKS MANAGEMENT ====================
 
 app.get('/api/admin/tasks', async (req, res) => {
-  const { password } = req.query;
+  const { password, userId } = req.query;
 
-  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Sai mật khẩu admin' });
+  const hasAccess = await checkAdminRights(password, userId);
+  if (!hasAccess) {
+    return res.status(401).json({ error: 'Sai mật khẩu admin hoặc không có quyền admin' });
   }
 
   try {
@@ -955,10 +999,11 @@ app.get('/api/admin/tasks', async (req, res) => {
 });
 
 app.post('/api/admin/tasks', async (req, res) => {
-  const { password, userId, categoryId, title, link, points, maxSlots } = req.body;
+  const { password, userId: requestingUserId, userId, categoryId, title, link, points, maxSlots } = req.body;
 
-  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Sai mật khẩu admin' });
+  const hasAccess = await checkAdminRights(password, requestingUserId);
+  if (!hasAccess) {
+    return res.status(401).json({ error: 'Sai mật khẩu admin hoặc không có quyền admin' });
   }
 
   if (!userId || !title || !link) return res.status(400).json({ error: 'Thiếu thông tin nhiệm vụ' });
@@ -981,10 +1026,11 @@ app.post('/api/admin/tasks', async (req, res) => {
 });
 
 app.put('/api/admin/tasks/:id', async (req, res) => {
-  const { password, userId, categoryId, title, link, points, maxSlots } = req.body;
+  const { password, userId: requestingUserId, userId, categoryId, title, link, points, maxSlots } = req.body;
 
-  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Sai mật khẩu admin' });
+  const hasAccess = await checkAdminRights(password, requestingUserId);
+  if (!hasAccess) {
+    return res.status(401).json({ error: 'Sai mật khẩu admin hoặc không có quyền admin' });
   }
 
   try {
@@ -1007,10 +1053,11 @@ app.put('/api/admin/tasks/:id', async (req, res) => {
 });
 
 app.delete('/api/admin/tasks/:id', async (req, res) => {
-  const { password } = req.body;
+  const { password, userId } = req.body;
 
-  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Sai mật khẩu admin' });
+  const hasAccess = await checkAdminRights(password, userId);
+  if (!hasAccess) {
+    return res.status(401).json({ error: 'Sai mật khẩu admin hoặc không có quyền admin' });
   }
 
   try {
@@ -1031,10 +1078,11 @@ app.delete('/api/admin/tasks/:id', async (req, res) => {
 // ==================== ADMIN RAW DATA VIEW ====================
 
 app.get('/api/admin/raw-data', async (req, res) => {
-  const { password, model } = req.query;
+  const { password, userId, model } = req.query;
 
-  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Sai mật khẩu admin' });
+  const hasAccess = await checkAdminRights(password, userId);
+  if (!hasAccess) {
+    return res.status(401).json({ error: 'Sai mật khẩu admin hoặc không có quyền admin' });
   }
 
   try {
@@ -1072,10 +1120,11 @@ app.get('/api/admin/raw-data', async (req, res) => {
 });
 
 app.put('/api/admin/raw-data', async (req, res) => {
-  const { password, model, documentId, data } = req.body;
+  const { password, userId, model, documentId, data } = req.body;
 
-  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Sai mật khẩu admin' });
+  const hasAccess = await checkAdminRights(password, userId);
+  if (!hasAccess) {
+    return res.status(401).json({ error: 'Sai mật khẩu admin hoặc không có quyền admin' });
   }
 
   if (!model || !documentId || !data) {
@@ -1120,10 +1169,11 @@ app.put('/api/admin/raw-data', async (req, res) => {
 // ==================== ADMIN SCHEMA VIEW ====================
 
 app.get('/api/admin/schema', async (req, res) => {
-  const { password } = req.query;
+  const { password, userId } = req.query;
 
-  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Sai mật khẩu admin' });
+  const hasAccess = await checkAdminRights(password, userId);
+  if (!hasAccess) {
+    return res.status(401).json({ error: 'Sai mật khẩu admin hoặc không có quyền admin' });
   }
 
   try {
@@ -1194,10 +1244,11 @@ app.get('/api/admin/schema', async (req, res) => {
 // ==================== ADMIN LOGS MANAGEMENT ====================
 
 app.get('/api/admin/logs', async (req, res) => {
-  const { password } = req.query;
+  const { password, userId } = req.query;
 
-  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Sai mật khẩu admin' });
+  const hasAccess = await checkAdminRights(password, userId);
+  if (!hasAccess) {
+    return res.status(401).json({ error: 'Sai mật khẩu admin hoặc không có quyền admin' });
   }
 
   try {
@@ -1219,10 +1270,11 @@ app.get('/api/admin/logs', async (req, res) => {
 });
 
 app.delete('/api/admin/logs', async (req, res) => {
-  const { password } = req.body;
+  const { password, userId } = req.body;
 
-  if (password !== ADMIN_PASSWORD && password !== SUPER_ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Sai mật khẩu admin' });
+  const hasAccess = await checkAdminRights(password, userId);
+  if (!hasAccess) {
+    return res.status(401).json({ error: 'Sai mật khẩu admin hoặc không có quyền admin' });
   }
 
   try {

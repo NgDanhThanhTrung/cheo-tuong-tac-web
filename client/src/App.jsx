@@ -51,6 +51,7 @@ function AdminPage({ isAdmin, adminPassword }) {
   const [newUserCurrentPoints, setNewUserCurrentPoints] = useState(10);
   const [newUserXP, setNewUserXP] = useState(0);
   const [newUserLevel, setNewUserLevel] = useState(1);
+  const [newUserIsAdmin, setNewUserIsAdmin] = useState(false);
   
   // Task form state
   const [isTaskModal, setIsTaskModal] = useState(false);
@@ -264,14 +265,15 @@ function AdminPage({ isAdmin, adminPassword }) {
       const response = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          password, 
-          fullName: newUserName, 
-          phone: newUserPhone, 
+        body: JSON.stringify({
+          password,
+          fullName: newUserName,
+          phone: newUserPhone,
           initialPoints: newUserInitialPoints,
           currentPoints: newUserCurrentPoints,
           xp: newUserXP,
-          level: newUserLevel
+          level: newUserLevel,
+          isAdmin: newUserIsAdmin
         })
       });
       if (response.ok) {
@@ -283,6 +285,7 @@ function AdminPage({ isAdmin, adminPassword }) {
         setNewUserCurrentPoints(10);
         setNewUserXP(0);
         setNewUserLevel(1);
+        setNewUserIsAdmin(false);
       }
     } catch (error) {
       console.error('Error adding user:', error);
@@ -295,14 +298,15 @@ function AdminPage({ isAdmin, adminPassword }) {
       const response = await fetch(`/api/admin/users/${editingUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          password, 
-          fullName: newUserName, 
-          phone: newUserPhone, 
+        body: JSON.stringify({
+          password,
+          fullName: newUserName,
+          phone: newUserPhone,
           initialPoints: newUserInitialPoints,
           currentPoints: newUserCurrentPoints,
           xp: newUserXP,
-          level: newUserLevel
+          level: newUserLevel,
+          isAdmin: newUserIsAdmin
         })
       });
       if (response.ok) {
@@ -315,6 +319,7 @@ function AdminPage({ isAdmin, adminPassword }) {
         setNewUserCurrentPoints(10);
         setNewUserXP(0);
         setNewUserLevel(1);
+        setNewUserIsAdmin(false);
       }
     } catch (error) {
       console.error('Error editing user:', error);
@@ -347,6 +352,7 @@ function AdminPage({ isAdmin, adminPassword }) {
     setNewUserCurrentPoints(user.currentPoints);
     setNewUserXP(user.xp || 0);
     setNewUserLevel(user.level || 1);
+    setNewUserIsAdmin(user.isAdmin || false);
     setIsUserModal(true);
   };
 
@@ -1352,6 +1358,18 @@ function AdminPage({ isAdmin, adminPassword }) {
                     min="1"
                   />
                 </div>
+                <div className="mb-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newUserIsAdmin}
+                      onChange={(e) => setNewUserIsAdmin(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="text-sm font-medium">Quyền Admin</span>
+                  </label>
+                  <p className="text-xs text-slate-400 mt-1">Cho phép user truy cập trang admin</p>
+                </div>
                 <div className="flex gap-3">
                   <button
                     type="button"
@@ -1364,6 +1382,7 @@ function AdminPage({ isAdmin, adminPassword }) {
                       setNewUserCurrentPoints(10);
                       setNewUserXP(0);
                       setNewUserLevel(1);
+                      setNewUserIsAdmin(false);
                     }}
                     className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 rounded-lg transition"
                   >
