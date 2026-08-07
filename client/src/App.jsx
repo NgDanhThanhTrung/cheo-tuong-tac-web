@@ -2273,132 +2273,128 @@ export default function App() {
                 const tiktokLimitReached = isTikTokTask && tiktokCount >= 3;
 
                 if (!task) return null;
-                
-                // Kiểm tra giới hạn TikTok
-                const isTikTokTask = task.categoryId === 'cat2';
-                const tiktokCount = currentUser?.tiktokDailyCount || 0;
-                const tiktokLimitReached = isTikTokTask && tiktokCount >= 3;
 
                 return (
                   <div
                     key={task.id}
-                    className="px-6 py-4 flex items-center justify-between hover:bg-slate-700/30 transition"
+                    className="px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4 hover:bg-slate-700/30 transition border-l-4 border-transparent hover:border-indigo-500"
                   >
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                        index === 0 ? 'bg-amber-500 text-white' :
-                        index === 1 ? 'bg-slate-400 text-white' :
-                        index === 2 ? 'bg-amber-700 text-white' :
+                    <div className="flex items-center gap-3 md:gap-4 w-full md:w-auto min-w-0">
+                      <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-bold text-xs md:text-sm flex-shrink-0 ${
+                        index === 0 ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-lg shadow-amber-500/30' :
+                        index === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-500 text-white shadow-lg shadow-slate-400/30' :
+                        index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-800 text-white shadow-lg shadow-amber-700/30' :
                         'bg-slate-700 text-slate-300'
                       }`}>
                         {index + 1}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1 md:gap-2 mb-1 md:mb-2 flex-wrap">
                           {task.isPriority && (
-                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 text-amber-300">
+                            <span className="px-1.5 py-0.5 md:px-2 py-0.5 rounded-full text-[10px] md:text-xs font-semibold bg-gradient-to-r from-amber-500/30 to-orange-500/30 border border-amber-500/50 text-amber-300 shadow-sm">
                               ⭐ Priority {task.priorityLevel}
                             </span>
                           )}
                           {task.isCoop && (
-                            <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/10 border border-purple-500/30 text-purple-300">
+                            <span className="px-1.5 py-0.5 md:px-2 py-0.5 rounded-full text-[10px] md:text-xs font-semibold bg-purple-500/20 border border-purple-500/40 text-purple-300 shadow-sm">
                               🤝 Co-op
                             </span>
                           )}
                           {category && (
                             <span
-                              className="text-lg px-2 py-0.5 rounded-lg"
-                              style={{ backgroundColor: `${category.color}20` }}
+                              className="text-base md:text-lg px-1.5 py-0.5 md:px-2 py-0.5 rounded-lg flex-shrink-0"
+                              style={{ backgroundColor: `${category.color}30`, border: `1px solid ${category.color}50` }}
                             >
                               {category.icon}
                             </span>
                           )}
-                          <h3 className="font-semibold text-slate-100">{task.title}</h3>
+                          <h3 className="font-semibold text-slate-100 text-sm md:text-base truncate">{task.title}</h3>
                         </div>
-                        <p className="text-xs text-slate-400 font-mono truncate">{task.link}</p>
-                        <p className="text-xs text-slate-500">Chủ sở hữu: {taskOwner?.displayName || taskOwner?.fullName || task.userId}</p>
+                        <p className="text-[10px] md:text-xs text-slate-400 font-mono truncate mb-1 hidden sm:block">{task.link}</p>
+                        <div className="flex items-center gap-1 md:gap-2">
+                          <span className="text-[10px] md:text-xs text-slate-500">Chủ sở hữu:</span>
+                          <span className="text-[10px] md:text-xs text-indigo-400 font-medium truncate">{taskOwner?.displayName || taskOwner?.fullName || task.userId}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-mono">
-                            +{task.points} điểm
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-3 w-full md:w-auto">
+                      <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+                        <span className="text-[10px] md:text-xs bg-amber-500/20 text-amber-400 border border-amber-500/40 px-1.5 py-0.5 md:px-2 py-0.5 rounded-full font-mono font-semibold">
+                          +{task.points} điểm
+                        </span>
+                        {task.isCoop && (
+                          <span className="text-[10px] md:text-xs bg-purple-500/20 text-purple-400 border border-purple-500/40 px-1.5 py-0.5 md:px-2 py-0.5 rounded-full font-mono font-semibold">
+                            🤝 {task.participants?.length || 0}/{task.requiredParticipants || 2}
                           </span>
-                          {task.isCoop && (
-                            <span className="text-xs bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full font-mono">
-                              🤝 {task.participants?.length || 0}/{task.requiredParticipants || 2}
-                            </span>
-                          )}
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${
-                            isFull
-                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                              : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                        )}
+                        <span className={`text-[10px] md:text-xs px-1.5 py-0.5 md:px-2 py-0.5 rounded-full font-mono font-semibold ${
+                          isFull
+                            ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+                            : 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
+                        }`}>
+                          {remainingSlots}/{task.maxSlots || 10} lượt
+                        </span>
+                        {isTikTokTask && (
+                          <span className={`text-[10px] md:text-xs px-1.5 py-0.5 md:px-2 py-0.5 rounded-full font-mono font-semibold ${
+                            tiktokLimitReached
+                              ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+                              : 'bg-purple-500/20 text-purple-400 border border-purple-500/40'
                           }`}>
-                            {remainingSlots}/{task.maxSlots || 10} lượt
+                            {tiktokCount}/3
                           </span>
-                          {isTikTokTask && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${
-                              tiktokLimitReached
-                                ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                                : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
-                            }`}>
-                              {tiktokCount}/3
-                            </span>
-                          )}
-                        </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 md:gap-2 flex-wrap">
                         {isSelf && !task.isPriority && (
                           <button
                             onClick={() => handleMakePriority(task.id, 1)}
-                            className="text-xs text-amber-400 hover:text-amber-300 transition flex items-center gap-1"
+                            className="text-[10px] md:text-xs text-amber-400 hover:text-amber-300 transition flex items-center gap-1 px-1.5 py-1 md:px-2 py-1 rounded hover:bg-amber-500/10"
                             title="Làm Priority (30 điểm)"
                           >
                             <Sparkles className="w-3 h-3" />
-                            Priority
+                            <span className="hidden sm:inline">Priority</span>
                           </button>
                         )}
                         {isSelf ? (
-                          <span className="text-xs text-slate-400 italic">Bài của bạn</span>
+                          <span className="text-[10px] md:text-xs text-slate-400 italic px-1.5 py-1 md:px-2 py-1 bg-slate-700/30 rounded">Bài của bạn</span>
                         ) : isFull ? (
-                          <span className="text-xs text-rose-400 font-medium">Hết lượt</span>
+                          <span className="text-[10px] md:text-xs text-rose-400 font-medium px-1.5 py-1 md:px-2 py-1 bg-rose-500/10 rounded">Hết lượt</span>
                         ) : tiktokLimitReached ? (
-                          <span className="text-xs text-rose-400 font-medium">Đạt giới hạn ngày</span>
+                          <span className="text-[10px] md:text-xs text-rose-400 font-medium px-1.5 py-1 md:px-2 py-1 bg-rose-500/10 rounded">Đạt giới hạn ngày</span>
                         ) : isDone ? (
-                          <span className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                          <span className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 rounded-xl text-[10px] md:text-xs font-semibold bg-emerald-500/20 border border-emerald-500/40 text-emerald-400">
                             <CheckCircle2 className="w-3 h-3" />
                             Đã chéo
                           </span>
                         ) : (
-                          <div className="flex gap-2">
+                          <div className="flex gap-1 md:gap-2 flex-wrap">
                             {currentUser.isAdmin ? (
                               <button
                                 onClick={() => handleOpenLink(task.id, task.link)}
-                                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white transition"
+                                className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-xl text-[10px] md:text-xs font-semibold bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white transition shadow-lg shadow-rose-500/30"
                               >
                                 <Sparkles className="w-3 h-3" />
-                                Auto-complete
+                                <span className="hidden sm:inline">Auto-complete</span>
                               </button>
                             ) : (
                               <>
                                 <button
                                   onClick={() => handleOpenLink(task.id, task.link)}
-                                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                                  className={`flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-xl text-[10px] md:text-xs font-semibold transition ${
                                     clickedLinks.has(task.id)
-                                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
                                       : 'bg-slate-700 hover:bg-slate-600 text-white'
                                   }`}
                                 >
                                   <ExternalLink className="w-3 h-3" />
-                                  {clickedLinks.has(task.id) ? 'Đã xem' : 'Bấm link'}
+                                  <span className="hidden sm:inline">{clickedLinks.has(task.id) ? 'Đã xem' : 'Bấm link'}</span>
                                 </button>
                                 <button
                                   onClick={() => handleConfirmTask(task.id)}
-                                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition"
+                                  className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-xl text-[10px] md:text-xs font-semibold bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white transition shadow-lg shadow-indigo-500/30"
                                 >
                                   <CheckCircle2 className="w-3 h-3" />
-                                  Xác nhận
+                                  <span className="hidden sm:inline">Xác nhận</span>
                                 </button>
                               </>
                             )}
